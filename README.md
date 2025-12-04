@@ -15,6 +15,8 @@ The platform provides a comprehensive suite of tools and services to transform t
 
 ---
 
+<img href="https://github.com/PaulsGitHubs/Cesium-projects-team/blob/main/demos/circuit1.gif" alt="Circuit"/>
+
 ## ✨ Core Capabilities
 
 Robotics Platforms is built on five foundational capabilities that streamline the entire hardware engineering lifecycle:
