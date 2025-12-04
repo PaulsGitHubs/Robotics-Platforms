@@ -15,7 +15,7 @@ The platform provides a comprehensive suite of tools and services to transform t
 
 ---
 
-<img href="https://github.com/PaulsGitHubs/Robotics-Platforms/blob/main/demos/circuit1.gif" alt="Circuit"/>
+<img src="https://github.com/PaulsGitHubs/Robotics-Platforms/blob/main/demos/circuit1.gif" alt="Circuit"/>
 
 ## ✨ Core Capabilities
 
