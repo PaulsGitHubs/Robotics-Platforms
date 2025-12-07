@@ -1,0 +1,43 @@
+/* static/css/styles.css -- responsive layout for the Digital Twin IDE */
+
+:root{
+  --bg:#0b0f12; --panel:#121418; --muted:#98a0a8; --accent:#00a3cc; --card:#0f1316;
+  --accent-2:#00d4ff; --success:#2ecc71; --danger:#e74c3c;
+  --sidebar-width:260px; --editor-width:350px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter,Roboto,system-ui,Arial}
+#layout{display:grid;grid-template-columns:var(--sidebar-width) 1fr var(--editor-width);grid-template-rows:100vh;gap:8px;height:100vh}
+
+/* Sidebar */
+#sidebar{background:var(--panel);border-radius:8px;padding:12px;overflow:auto}
+#sidebar h2{margin:0 0 8px 0;color:var(--accent)}
+.sensor-item{padding:8px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:8px;cursor:grab;color:var(--muted)}
+.sensor-item:hover{background:rgba(255,255,255,0.03);color:#fff}
+
+#aiInput{width:100%;height:90px;padding:8px;border-radius:6px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:#fff;resize:vertical}
+
+/* Viewer */
+#viewer{background:#000;border-radius:8px;position:relative;overflow:hidden}
+
+/* Editor */
+#editor-container{background:var(--panel);border-radius:8px;padding:12px;display:flex;flex-direction:column;height:100%}
+.editor-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#editor{flex:1;width:100%;padding:10px;border-radius:6px;background:#0b0b0b;border:1px solid rgba(255,255,255,0.03);color:#fff;font-family:monospace;min-height:220px;resize:vertical}
+
+/* Buttons */
+.btn{padding:8px 10px;border-radius:6px;border:none;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.outline{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+
+/* Console */
+.console-body{margin-top:12px;padding:8px;border-radius:6px;background:rgba(255,255,255,0.01);height:160px;overflow:auto;font-family:monospace;color:var(--muted)}
+
+/* Responsive */
+@media (max-width: 1000px) {
+  #layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  #sidebar{order:3;height:auto}
+  #viewer{order:1;height:60vh}
+  #editor-container{order:2;height:40vh}
+}
