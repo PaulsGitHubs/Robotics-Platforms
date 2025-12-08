@@ -1,12 +1,19 @@
-Allow users to upload their 3d objects and save the paths either on the internet or on this github. We need later to sync to our server. 
+# 3D Objects Folder
 
-or a list that we can write into a script to make it downloadable from link.
-example: [https://www.roboticsplatforms.com/digital_twin/objectfile.glb, object_name, https://www.roboticsplatforms.com/digital_twin/objectfile.glb, https://www.roboticsplatforms.com/digital_twin/objectfile.glb, object_name]
+This folder stores user-uploaded `.glb`, `.gltf`, `.obj`, `.fbx`, or `.dae` files.
 
-when developing locally on your own computer with flask and js you paths are going to look like: [www.localhost/5000/3d_object, object_name].
+In future deployment:
+- Users will upload objects through a Flask route.
+- Paths will be saved to a list or database.
+- Server will sync files so all users can load them.
 
-pseudo code:
-@app.route
-upload2dobject(3dobject{x}):
-allow user to upload the object through a flask route that recieves it from the client and saves locally on your computer. then we deploy on the server and allow user to upload their 3d objects to it.
+### Example JSON List
+[
+  ["https://www.roboticsplatforms.com/digital_twin/car.glb", "Car"],
+  ["https://www.roboticsplatforms.com/digital_twin/house.glb", "House"]
+]
 
+### Local Development Path Example
+- http://localhost:5000/3d_objects/drone.glb
+
+This folder is currently a placeholder for future development.

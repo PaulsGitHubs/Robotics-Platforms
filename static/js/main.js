@@ -1,0 +1,17 @@
+// static/js/main.js
+import { initScene, viewer } from "./scene.js";
+import { initUI } from "./ui.js";
+import { initEditor } from "./editor.js";
+
+console.log("Digital Twin IDE starting...");
+
+// Boot sequence
+(async function boot() {
+    await initScene();   // create Cesium viewer
+    initEditor();        // create CodeMirror editor
+    initUI();            // bind buttons, AI, sensors
+
+    console.log("Digital Twin IDE loaded.");
+})();
+
+
