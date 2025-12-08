@@ -1,0 +1,21 @@
+[33m893d1d8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mai-sensor-integration[m[33m)[m feat: Implement comprehensive AI sensor integration framework. Includes new real-time clients, dedicated sensor objects (LiDAR, Radar, etc.), UI components, and refactored server host logic.
+[33m3335b0b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/ai-sensor-integration[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Added Flask server with upload 3d models functionality
+[33m016415e[m Update 3d_object_list_for_download.py
+[33m6b6ebe9[m Update ai_integegrations.py
+[33m162aa61[m Create any_other_media_sounds_images_videos
+[33m6da855a[m Create css
+[33mcd0c55e[m Create base.html
+[33mc959e79[m Create Server_Host.py
+[33m1e901ef[m Create readme.md
+[33m42865c5[m Create physics.js
+[33mb40389c[m Create ai_integegrations.py
+[33mf00a9ac[m Create 3d_object_list_for_download.py
+[33m322946c[m Create sensor_parameter_configurations.js
+[33maa3a308[m Optimized digitaltwin gif file size inorder to improve README loading time
+[33m882c6f5[m Added digitaltwin simulation gif
+[33md7bf45b[m Fixed img link prop
+[33mdf3bd9e[m Fixed img link
+[33mfac26d3[m Merge branch 'dev'
+[33m5147329[m[33m ([m[1;31morigin/dev[m[33m)[m Added demos directory with gif
+[33m6f37703[m Added LICENSE and content to README.md
+[33mad69553[m first commit

@@ -139,6 +139,7 @@ Robotics-Platforms/
 🧠 AI Query Example
 Fly to the Eiffel Tower
 
+Fix: removed .env file
 
 AI returns:
 
