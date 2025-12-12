@@ -30,3 +30,12 @@ export const Utils = {
         });
     }
 };
+
+export function calculateMotorSpeed(power, maxSpeed) {
+    if (power < 0 || power > 1) {
+        throw new Error("Power must be between 0 and 1.");
+    }
+    return power * maxSpeed;
+}
+
+
