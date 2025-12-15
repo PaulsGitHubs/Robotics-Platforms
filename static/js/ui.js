@@ -1,35 +1,43 @@
 // static/js/ui.js
 
-import { viewer, clearAllEntities } from "./scene.js";
-
-    // Drag-drop sensors (real implementation in next batch)
-   import { enableSensorPlacement } from "./sensors/sensor_dragdrop.js";
-enableSensorPlacement();
-
+import { getViewer, clearAllEntities } from "./scene.js";
+import { enableSensorPlacement } from "./sensors/sensor_dragdrop.js";
 
 export function initUI() {
     console.log("UI initialized.");
 
-    // Buttons
-    document.getElementById("centerHome").onclick = () => {
-        viewer.camera.flyHome(1.5);
-    };
+    // Enable sensor drag & drop AFTER scene is ready
+    enableSensorPlacement();
 
-    document.getElementById("clearEntities").onclick = () => {
+    // Home camera button
+    document.getElementById("centerHome")?.addEventListener("click", () => {
+        const viewer = getViewer();
+        if (!viewer) {
+            console.warn("Viewer not ready yet");
+            return;
+        }
+        viewer.camera.flyHome(1.5);
+    });
+
+    // Clear entities button
+    document.getElementById("clearEntities")?.addEventListener("click", () => {
         clearAllEntities();
-    };
+    });
 
     // AI button
-    const aiSend = document.getElementById("aiSend");
-    aiSend.onclick = () => handleAIQuery();
-
+    document.getElementById("askAiBtn")?.addEventListener("click", () => {
+        handleAIQuery();
+    });
 }
 
 // -------------------------
 // AI Query Handler
 // -------------------------
 async function handleAIQuery() {
-    const input = document.getElementById("aiInput").value.trim();
+    const inputEl = document.getElementById("aiInput");
+    if (!inputEl) return;
+
+    const input = inputEl.value.trim();
     if (!input) return;
 
     const res = await fetch("/ai_query", {
@@ -41,35 +49,8 @@ async function handleAIQuery() {
     const data = await res.json();
     console.log("AI Response:", data.message);
 
-    // Inject into console
     const consoleDiv = document.getElementById("consoleOutput");
-    consoleDiv.innerText = data.message;
+    if (consoleDiv) {
+        consoleDiv.innerText = data.message;
+    }
 }
-
-// -------------------------
-// Sensor Drag–Drop Setup
-// -------------------------
-export function setupSensorDragDrop() {
-    const sensors = document.querySelectorAll(".sensor-item");
-
-    sensors.forEach(item => {
-        item.addEventListener("dragstart", (e) => {
-            e.dataTransfer.setData("sensorType", item.dataset.sensorType);
-        });
-    });
-
-    const viewerDiv = document.getElementById("viewer");
-
-    viewerDiv.addEventListener("dragover", (e) => e.preventDefault());
-
-    viewerDiv.addEventListener("drop", (e) => {
-        e.preventDefault();
-
-        // Example: add point where dropped
-        const type = e.dataTransfer.getData("sensorType");
-        console.log("Dropped sensor:", type);
-
-        alert(`Sensor "${type}" placed (actual render in next batch).`);
-    });
-}
-

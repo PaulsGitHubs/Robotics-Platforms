@@ -1,5 +1,5 @@
 // static/js/main.js
-import { initScene, viewer } from "./scene.js";
+import { initScene, getViewer } from "./scene.js";
 import { initUI } from "./ui.js";
 import { initEditor } from "./editor.js";
 
@@ -13,5 +13,3 @@ console.log("Digital Twin IDE starting...");
 
     console.log("Digital Twin IDE loaded.");
 })();
-
-

@@ -1,36 +1,56 @@
-// static/js/scene.js
+import { physicsStep } from "../../physics/physics.js";
 
-export let viewer = null;
+let viewer = null;
+let lastTime = performance.now();
+
+export function getViewer() {
+    return viewer;
+}
 
 export async function initScene() {
-    console.log("Initializing Cesium scene...");
+    console.log("Initializing Cesium scene (Ion disabled)...");
 
     viewer = new Cesium.Viewer("viewer", {
         animation: false,
         timeline: false,
-        baseLayerPicker: true,
+        baseLayerPicker: false,
         sceneModePicker: false,
         geocoder: false,
         homeButton: false,
         fullscreenButton: false,
         navigationHelpButton: false,
         infoBox: false,
-        selectionIndicator: false
+        selectionIndicator: false,
+
+        // 🔴 THIS DISABLES CESIUM ION COMPLETELY
+        imageryProvider: false,
+        terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     });
 
-    // Default camera view (New York)
+    // Optional: light blue background so globe isn't black
+    viewer.scene.backgroundColor = Cesium.Color.SKYBLUE;
+
     viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(-74.0060, 40.7128, 2000),
+        destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 2000),
         duration: 2
     });
 
-    // Global event log
     viewer.scene.globe.depthTestAgainstTerrain = true;
-    console.log("Cesium viewer created.");
+
+    startPhysicsLoop();
+
+    console.log("Cesium viewer created (no Ion).");
 }
 
-// Utility for scripts
+function startPhysicsLoop() {
+    viewer.scene.preUpdate.addEventListener(() => {
+        const now = performance.now();
+        const delta = (now - lastTime) / 1000;
+        lastTime = now;
+        physicsStep(delta);
+    });
+}
+
 export function clearAllEntities() {
-    if (!viewer) return;
-    viewer.entities.removeAll();
+    if (viewer) viewer.entities.removeAll();
 }

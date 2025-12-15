@@ -1,5 +1,4 @@
-// static/js/editor.js
-import { viewer } from "./scene.js";
+import { getViewer } from "./scene.js";
 
 let editorObj = null;
 
@@ -11,38 +10,38 @@ export function initEditor() {
         mode: "javascript",
         theme: "dracula",
         matchBrackets: true,
-        autoCloseBrackets: true,
+        autoCloseBrackets: true
     });
 
     editorObj.setSize("100%", "100%");
-
     setupButtons();
 }
 
 function setupButtons() {
-    document.getElementById("runButton").onclick = () => runCode();
-    document.getElementById("stopButton").onclick = () => clearOutput();
-    document.getElementById("saveButton").onclick = () => saveScript();
+    document.getElementById("runButton").onclick = runCode;
+    document.getElementById("stopButton").onclick = clearOutput;
+    document.getElementById("saveButton").onclick = saveScript;
 }
 
-// -------------------------
-// Execute code
-// -------------------------
 function runCode() {
     clearOutput();
     const code = editorObj.getValue();
+
+    const viewer = getViewer();
+    if (!viewer) {
+        logOutput("Viewer not ready.");
+        return;
+    }
+
     try {
         const func = new Function("viewer", code);
         func(viewer);
         logOutput("Script executed successfully.");
     } catch (err) {
-        logOutput("Error: " + err);
+        logOutput("Error: " + err.message);
     }
 }
 
-// -------------------------
-// Console Output
-// -------------------------
 function logOutput(msg) {
     const div = document.getElementById("consoleOutput");
     div.innerText += msg + "\n";
@@ -52,11 +51,7 @@ function clearOutput() {
     document.getElementById("consoleOutput").innerText = "";
 }
 
-// -------------------------
-// Save Script (LocalStorage)
-// -------------------------
 function saveScript() {
-    const code = editorObj.getValue();
-    localStorage.setItem("userScript", code);
+    localStorage.setItem("userScript", editorObj.getValue());
     logOutput("Saved.");
 }

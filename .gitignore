@@ -1,3 +1,25 @@
-.env                                                                                                                                                                                                                                                                                               
-__pycache__
+# Environment
+.env
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+node_modules/
+
+# Cesium build/cache
+Build/
+CesiumBuild/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

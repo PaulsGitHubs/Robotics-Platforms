@@ -1,0 +1,136 @@
+<!-- templates/digital_twin.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Digital Twin IDE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- =========================
+       CesiumJS
+  ========================== -->
+  <link
+    href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css"
+    rel="stylesheet"
+  />
+  <script
+    src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"
+  ></script>
+
+  <!-- =========================
+       CodeMirror
+  ========================== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css"
+  />
+
+  <!-- =========================
+       Font Awesome
+  ========================== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
+  <!-- =========================
+       App Styles
+  ========================== -->
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/styles.css') }}"
+  />
+</head>
+
+<body>
+
+<div id="layout">
+
+  <!-- =========================
+       Sidebar
+  ========================== -->
+  <aside id="sidebar">
+    <h2>Tools</h2>
+
+    <section>
+      <h3>Sensors</h3>
+      {% for sensor in [
+        'Ultrasonic','Radar','LiDAR',
+        'Proximity','Temperature','Humidity','Pressure'
+      ] %}
+      <div
+        class="sensor-item"
+        draggable="true"
+        data-sensor-type="{{ sensor }}"
+      >
+        {{ sensor }}
+      </div>
+      {% endfor %}
+    </section>
+
+    <!-- AI Assistant -->
+    <section class="panel">
+      <h3>AI Assistant</h3>
+      <textarea
+        id="aiInput"
+        placeholder="Ask AI to move camera, add sensors, or generate code…"
+      ></textarea>
+      <button id="askAiBtn" class="btn primary">
+        <i class="fas fa-robot"></i> Ask AI
+      </button>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="panel">
+      <h3>Quick Actions</h3>
+      <button id="centerHome" class="btn outline">
+        <i class="fas fa-home"></i> Home Camera
+      </button>
+      <button id="clearEntities" class="btn outline">
+        <i class="fas fa-trash"></i> Clear Entities
+      </button>
+    </section>
+  </aside>
+
+  <!-- =========================
+       Cesium Viewer
+  ========================== -->
+  <main id="viewer"></main>
+
+  <!-- =========================
+       Code Editor
+  ========================== -->
+  <aside id="editor-container">
+    <div class="editor-header">
+      <span class="editor-title">main.js</span>
+      <button id="saveButton" class="btn outline">
+        <i class="fas fa-save"></i> Save
+      </button>
+    </div>
+
+    <textarea id="editor"></textarea>
+
+    <div class="editor-actions">
+      <button id="runButton" class="btn primary">
+        <i class="fas fa-play"></i> Run
+      </button>
+      <button id="stopButton" class="btn outline">
+        <i class="fas fa-stop"></i> Stop
+      </button>
+    </div>
+
+    <div id="consoleOutput" class="console-body"></div>
+  </aside>
+
+</div><!-- CodeMirror (GLOBAL LIB) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+
+<!-- App Entry (MODULE) -->
+<script type="module"
+  src="{{ url_for('static', filename='js/main.js') }}">
+</script>
