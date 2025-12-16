@@ -1,6 +1,29 @@
-Physics can be written in both JS or Python.
-  An example of physics is controling different objects based on weight, size, environment, etc.
+import { integrate } from "./rigid_body.js";
+import { Environment } from "./environment.js";
+import { handleCollisions } from "./collision.js";
+import { applyBuoyancy } from "./buoyancy.js";
 
-  Things like collision detection, water fluidity, etc should be worked on here
+const bodies = [];
 
-Play control should also be worked on here. It is a good idea to make sure that the player controls are very user friendly and realistic. 
+export function registerBody(body) {
+  bodies.push(body);
+}
+
+export function physicsStep(dt) {
+  bodies.forEach(body => {
+    // Gravity
+    if (body.useGravity) {
+      body.acceleration.z = Environment.gravity;
+    }
+
+    //Buoyancy (water level at z = 0)
+    applyBuoyancy(body, 0);
+
+    // Integrate motion
+    integrate(body, dt);
+  });
+
+  handleCollisions(bodies);
+}
+
+

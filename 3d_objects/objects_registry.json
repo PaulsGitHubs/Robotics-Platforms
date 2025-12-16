@@ -1,0 +1,13 @@
+{
+  "Drone": {
+    "mass": 1.2,
+    "drag": 0.3,
+    "restitution": 0.1,
+    "playerControlled": true
+  },
+  "Car": {
+    "mass": 1200,
+    "drag": 0.05,
+    "restitution": 0.2
+  }
+}

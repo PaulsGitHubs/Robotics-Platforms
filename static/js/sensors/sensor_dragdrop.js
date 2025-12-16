@@ -1,6 +1,5 @@
-// static/js/sensors/sensor_dragdrop.js
 import { SensorFactory } from "./sensor_factory.js";
-import { viewer } from "../scene.js";
+import { getViewer } from "../scene.js";
 
 export function enableSensorPlacement() {
     const viewerDiv = document.getElementById("viewer");
@@ -10,9 +9,14 @@ export function enableSensorPlacement() {
     viewerDiv.addEventListener("drop", (e) => {
         e.preventDefault();
 
+        const viewer = getViewer();
+        if (!viewer) {
+            console.error("Viewer not ready yet");
+            return;
+        }
+
         const sensorType = e.dataTransfer.getData("sensorType");
 
-        // Pick position from screen
         const pos = viewer.camera.pickEllipsoid(
             new Cesium.Cartesian2(e.clientX, e.clientY)
         );
