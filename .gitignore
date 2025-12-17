@@ -1,11 +1,9 @@
-# Environment
+# Environment variables
 .env
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 
 # Node
 node_modules/
@@ -20,6 +18,7 @@ CesiumBuild/
 # OS
 .DS_Store
 
-# IDE
+# IDEs / Editors
 .vscode/
 .idea/
+.pytest_cache/

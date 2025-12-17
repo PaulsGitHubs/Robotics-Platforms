@@ -78,6 +78,74 @@ The backend exposes a small public API for demo and integration purposes. These 
 
 ---
 
+## ✅ Testing & CI
+
+We include a small test suite covering key public endpoints and auth behavior. The project uses GitHub Actions to run tests and `pip-audit` on pull requests.
+
+Quick local steps:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+python -m pytest backend/tests
+```
+
+CI: see `.github/workflows/ci.yml` which installs deps, runs tests, and runs `pip-audit`.
+
+---
+
+## 🔗 Endpoints (short reference)
+
+- `GET /` — service info (links to `/docs` and `/health`).
+- `GET /health` — JSON health status for monitoring.
+- `GET /api/geo/area?lat=<lat>&lng=<lng>&radius=<r>` — normalized coordinates.
+- `GET /api/public-data/?lat=<lat>&lng=<lng>&radius=<r>` — returns OSM elements, returns `[]` if upstream fails.
+- `GET /api/telecom/?lat=<lat>&lng=<lng>` — simulated telecom nodes (requires `X-API-Key` header: user or admin role).
+- `GET /api/simulation/zone?lat=<lat>&lng=<lng>&radius=<r>` — simulation endpoint (requires `X-API-Key` header: admin role).
+
+---
+
+## 🔐 Security & Secrets
+
+- Do not commit secrets (e.g., API keys) to the repository. Use `.env` (ignored) for local development and provide a `.env.example` for reference.
+- Use GitHub Secrets or Vault for production secrets and the CI pipeline.
+- See `SECURITY.md` for more details and recommendations.
+
+---
+
+## 🧭 How to open a Pull Request
+
+1. Create a feature branch:
+
+```bash
+git fetch origin
+git checkout main
+git pull origin main
+git checkout -b feature/docs-tests-pr
+```
+
+2. Commit logically grouped changes and run tests locally.
+
+```bash
+git add <files>
+git commit -m "docs: add testing and endpoints; PR instructions"
+python -m pytest backend/tests
+```
+
+3. Push and open a PR:
+
+```bash
+git push -u origin feature/docs-tests-pr
+# Open a PR on GitHub from that branch into main, include:
+# - summary of changes
+# - test results
+# - security notes
+```
+
+---
+
+## If you'd like, I can push this branch and open the PR for you (I can attempt to use the GitHub CLI if available).
+
 ## 🛠️ Integrated Tools & Demos
 
 The platform offers several interactive tools and demonstrations for hands-on experience:
