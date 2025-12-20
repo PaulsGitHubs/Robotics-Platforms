@@ -1,136 +1,2229 @@
-<!-- templates/digital_twin.html -->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Digital Twin IDE</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <title>OPENQQUANTIFY Digital Twin IDE</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/spectrum-colorpicker2/dist/spectrum.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/spectrum-colorpicker2/dist/spectrum.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/comment/comment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/javascript-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+  <style>
+    /* Global styles */
+    :root {
+      --primary: #00a3cc;
+      --primary-dark: #0088a8;
+      --primary-light: #00b8e6;
+      --bg-dark: #121212;
+      --bg-darker: #0a0a0a;
+      --bg-light: #1e1e1e;
+      --bg-lighter: #2a2a2a;
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0b0;
+      --border-dark: #333333;
+      --border-light: #444444;
+      --success: #2ecc71;
+      --warning: #f39c12;
+      --danger: #e74c3c;
+      --info: #3498db;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body, #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+    }
+    
+    /* Main layout */
+    .app-container {
+      display: flex;
+      height: 100vh;
+      background-color: var(--bg-dark);
+    }
+    
+    /* Sidebar styles */
+    .sidebar {
+      width: 300px;
+      background-color: var(--bg-darker);
+      border-right: 1px solid var(--border-dark);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+    
+    .sidebar.collapsed {
+      width: 50px;
+    }
+    
+    .sidebar-header {
+      padding: 15px;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .sidebar-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .toggle-sidebar {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+    
+    .toggle-sidebar:hover {
+      color: var(--primary);
+      transform: scale(1.1);
+    }
+    
+    /* Tab system */
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .sidebar-tab {
+      padding: 12px 15px;
+      cursor: pointer;
+      background-color: var(--bg-dark);
+      border-right: 1px solid var(--border-dark);
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .sidebar-tab:hover {
+      background-color: var(--bg-light);
+      color: var(--text-primary);
+    }
+    
+    .sidebar-tab.active {
+      background-color: var(--bg-darker);
+      border-bottom: 2px solid var(--primary);
+      color: var(--text-primary);
+    }
+    
+    .sidebar-tab i {
+      font-size: 14px;
+    }
+    
+    /* Tab content */
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: var(--bg-darker);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Function documentation styles */
+    .function-doc {
+      background-color: var(--bg-dark);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-left: 3px solid var(--primary);
+    }
+    
+    .function-name {
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+    
+    .function-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .function-params {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .param-name {
+      color: var(--info);
+    }
+    
+    /* File explorer */
+    .file-explorer {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .file-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      margin-bottom: 2px;
+    }
+    
+    .file-item:hover {
+      background-color: var(--bg-light);
+      color: var(--text-primary);
+    }
+    
+    .file-item i {
+      margin-right: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+    
+    .file-item.active {
+      background-color: var(--bg-light);
+      color: var(--primary);
+    }
+    
+    .file-item.active i {
+      color: var(--primary);
+    }
+    
+    /* Main content area */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background-color: var(--bg-dark);
+    }
+    
+    /* Editor layout */
+    .editor-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .code-editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-dark);
+    }
+    
+    .editor-toolbar {
+      padding: 10px 15px;
+      background-color: var(--bg-dark);
+      border-bottom: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .editor-title {
+      font-size: 14px;
+      margin: 0;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .CodeMirror {
+      height: 100% !important;
+      font-size: 14px;
+      background-color: var(--bg-darker) !important;
+    }
+    
+    .CodeMirror-gutters {
+      background-color: var(--bg-darker) !important;
+      border-right: 1px solid var(--border-dark) !important;
+    }
+    
+    /* Preview pane */
+    .preview-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    
+    /* Top toolbar */
+    .top-toolbar {
+      padding: 12px 15px;
+      background-color: var(--bg-dark);
+      border-bottom: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    
+    .toolbar-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .btn:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background-color: rgba(0, 163, 204, 0.1);
+    }
+    
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    
+    /* Console */
+    .console-container {
+      height: 200px;
+      background-color: var(--bg-darker);
+      border-top: 1px solid var(--border-dark);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .console-header {
+      padding: 8px 12px;
+      background-color: var(--bg-dark);
+      border-bottom: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .console-title {
+      font-size: 13px;
+      margin: 0;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .console-clear {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+    
+    .console-clear:hover {
+      color: var(--primary);
+    }
+    
+    .console-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    
+    /* Sensor categories */
+    .sensor-category {
+      margin-bottom: 15px;
+      background-color: var(--bg-dark);
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border-dark);
+    }
+    
+    .category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .category-header:hover {
+      background-color: var(--bg-light);
+    }
+    
+    .category-header i {
+      transition: transform 0.2s ease;
+    }
+    
+    .sensor-items {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 10px;
+      background-color: var(--bg-darker);
+    }
+    
+    .sensor-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      cursor: grab;
+      transition: all 0.2s ease;
+    }
+    
+    .sensor-item:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 163, 204, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .sensor-item i {
+      font-size: 20px;
+      margin-bottom: 8px;
+      color: var(--primary);
+    }
+    
+    .sensor-item span {
+      font-size: 12px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    /* Properties panel */
+    .properties-panel {
+      position: absolute;
+      right: 20px;
+      top: 60px;
+      width: 320px;
+      background-color: var(--bg-darker);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-dark);
+      z-index: 100;
+      display: none;
+      overflow: hidden;
+    }
+    
+    .properties-header {
+      padding: 12px;
+      background-color: var(--bg-dark);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .properties-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .properties-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .properties-close:hover {
+      color: var(--primary);
+      transform: scale(1.1);
+    }
+    
+    .properties-content {
+      padding: 15px;
+    }
+    
+    .property-row {
+      margin-bottom: 15px;
+    }
+    
+    .property-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .property-input {
+      width: 100%;
+      padding: 8px 12px;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+    
+    .property-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(0, 163, 204, 0.2);
+    }
+    
+    /* Upload modal */
+    .upload-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .upload-content {
+      background-color: var(--bg-darker);
+      border-radius: 8px;
+      padding: 20px;
+      width: 500px;
+      max-width: 90%;
+      border: 1px solid var(--primary);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    
+    .upload-header {
+      margin-bottom: 20px;
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 500;
+    }
+    
+    .upload-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .form-label {
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    
+    .form-input {
+      padding: 10px 12px;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(0, 163, 204, 0.2);
+    }
+    
+    .upload-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    /* AI Assistant Panel */
+    .ai-assistant-panel {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      width: 320px;
+      background-color: var(--bg-darker);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--primary);
+      z-index: 100;
+      display: none;
+      overflow: hidden;
+    }
+    
+    .ai-assistant-header {
+      padding: 12px;
+      background-color: var(--bg-dark);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .ai-assistant-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .ai-assistant-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .ai-assistant-close:hover {
+      color: var(--primary);
+      transform: scale(1.1);
+    }
+    
+    .ai-assistant-content {
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .ai-message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    
+    .ai-user {
+      background-color: var(--bg-light);
+      color: var(--text-primary);
+      margin-left: 20px;
+      border-left: 2px solid var(--primary);
+    }
+    
+    .ai-assistant {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      margin-right: 20px;
+      border-right: 2px solid var(--info);
+    }
+    
+    .ai-input-container {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid var(--border-dark);
+      background-color: var(--bg-dark);
+    }
+    
+    .ai-input {
+      flex: 1;
+      padding: 8px 12px;
+      background-color: var(--bg-darker);
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      color: var(--text-primary);
+      margin-right: 8px;
+    }
+    
+    .ai-send {
+      padding: 8px 12px;
+      background-color: var(--primary);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+    }
+    
+    /* Collapsed sidebar styles */
+    .sidebar.collapsed .sidebar-header h2,
+    .sidebar.collapsed .sidebar-tabs,
+    .sidebar.collapsed .tab-content {
+      display: none;
+    }
+    
+    .sidebar.collapsed .sidebar-header {
+      justify-content: center;
+      padding: 15px 0;
+    }
+    
+    .sidebar.collapsed {
+      width: 50px;
+      overflow: hidden;
+    }
+    
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      max-width: 200px;
+      backdrop-filter: blur(2px);
+    }
+    
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-dark);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-light);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+      .sidebar {
+        width: 250px;
+      }
+    }
+    
+    @media (max-width: 992px) {
+      .editor-container {
+        flex-direction: column;
+      }
+      
+      .code-editor, .preview-pane {
+        height: 50%;
+      }
+    }
+    
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    /* Status colors for console */
+    .log-info {
+      color: var(--info);
+    }
+    
+    .log-success {
+      color: var(--success);
+    }
+    
+    .log-warning {
+      color: var(--warning);
+    }
+    
+    .log-error {
+      color: var(--danger);
+    }
+  </style>
 
-  <!-- =========================
-       CesiumJS
-  ========================== -->
-  <link
-    href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css"
-    rel="stylesheet"
-  />
-  <script
-    src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"
-  ></script>
-
-  <!-- =========================
-       CodeMirror
-  ========================== -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css"
-  />
-
-  <!-- =========================
-       Font Awesome
-  ========================== -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
-
-  <!-- =========================
-       App Styles
-  ========================== -->
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/styles.css') }}"
-  />
 </head>
-
 <body>
-
-<div id="layout">
-
-  <!-- =========================
-       Sidebar
-  ========================== -->
-  <aside id="sidebar">
-    <h2>Tools</h2>
-
-    <section>
-      <h3>Sensors</h3>
-      {% for sensor in [
-        'Ultrasonic','Radar','LiDAR',
-        'Proximity','Temperature','Humidity','Pressure'
-      ] %}
-      <div
-        class="sensor-item"
-        draggable="true"
-        data-sensor-type="{{ sensor }}"
-      >
-        {{ sensor }}
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Digital Twin IDE</h2>
+        <button class="toggle-sidebar" id="toggleSidebar">
+          <i class="fas fa-chevron-left"></i>
+        </button>
       </div>
-      {% endfor %}
-    </section>
+      
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active" data-tab="explorer">
+          <i class="fas fa-folder-open"></i> Explorer
+        </div>
+        <div class="sidebar-tab" data-tab="entities">
+          <i class="fas fa-cubes"></i> Entities
+        </div>
+        <div class="sidebar-tab" data-tab="sensors">
+          <i class="fas fa-satellite-dish"></i> Sensors
+        </div>
+        <div class="sidebar-tab" data-tab="functions">
+          <i class="fas fa-book"></i> Functions
+        </div>
+      </div>
+      
+      <!-- Explorer Tab -->
+      <div class="tab-content active" id="explorer-tab">
+        <ul class="file-explorer">
+          <li class="file-item active" data-file="main.js">
+            <i class="fas fa-file-code"></i> main.js
+          </li>
+          <li class="file-item" data-file="scene.js">
+            <i class="fas fa-file-code"></i> scene.js
+          </li>
+          <li class="file-item" data-file="entities.js">
+            <i class="fas fa-file-code"></i> entities.js
+          </li>
+          <li class="file-item" data-file="sensors.js">
+            <i class="fas fa-file-code"></i> sensors.js
+          </li>
+        </ul>
+        
+        <div style="padding: 10px; border-top: 1px solid #e1e5eb;">
+          <button class="btn btn-sm" id="uploadModelBtn" style="width: 100%;">
+            <i class="fas fa-upload"></i> Upload 3D Model
+          </button>
+        </div>
+      </div>
+      
+      <!-- Entities Tab -->
+      <div class="tab-content" id="entities-tab">
+        <div style="padding: 10px;">
+          <input type="text" class="form-input" placeholder="Search entities..." style="margin-bottom: 10px;">
+          <div id="entities-list">
+            <!-- Entities will be populated here -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sensors Tab -->
+      <div class="tab-content" id="sensors-tab">
+        <div style="padding: 10px;">
+          <div class="sensor-category">
+            <div class="category-header">
+              <span><i class="fas fa-ruler-combined"></i> Distance Sensors</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="sensor-items">
+              <div class="sensor-item" draggable="true" data-sensor-type="Ultrasonic" data-sensor-shape="cone">
+                <i class="fas fa-broadcast-tower"></i>
+                <span>Ultrasonic</span>
+              </div>
+              <div class="sensor-item" draggable="true" data-sensor-type="Radar" data-sensor-shape="cone">
+                <i class="fas fa-satellite"></i>
+                <span>Radar</span>
+              </div>
+              <div class="sensor-item" draggable="true" data-sensor-type="LiDAR" data-sensor-shape="cone">
+                <i class="fas fa-laser"></i>
+                <span>LiDAR</span>
+              </div>
+              <div class="sensor-item" draggable="true" data-sensor-type="Proximity" data-sensor-shape="sphere">
+                <i class="fas fa-expand"></i>
+                <span>Proximity</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="sensor-category">
+            <div class="category-header">
+              <span><i class="fas fa-leaf"></i> Environmental</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="sensor-items">
+              <div class="sensor-item" draggable="true" data-sensor-type="Temperature" data-sensor-shape="point">
+                <i class="fas fa-temperature-high"></i>
+                <span>Temperature</span>
+              </div>
+              <div class="sensor-item" draggable="true" data-sensor-type="Humidity" data-sensor-shape="point">
+                <i class="fas fa-tint"></i>
+                <span>Humidity</span>
+              </div>
+              <div class="sensor-item" draggable="true" data-sensor-type="Pressure" data-sensor-shape="point">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Pressure</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="sensor-category">
+            <div class="category-header">
+              <span><i class="fas fa-running"></i> Motion Sensors</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="sensor-items">
+              <div class="sensor-item" draggable="true" data-sensor-type="Accelerometer" data-sensor-shape="point">
+                <i class="fas fa-arrows-alt"></i>
+                <span>Accelerometer</span>
+              </div>
+              <div class="sensor-item" draggable="true" data-sensor-type="Gyroscope" data-sensor-shape="point">
+                <i class="fas fa-compass"></i>
+                <span>Gyroscope</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Functions Documentation Tab -->
+      <div class="tab-content" id="functions-tab">
+        <div style="padding: 10px;">
+          <div class="function-doc">
+            <div class="function-name">addPoint(lon, lat, height)</div>
+            <div class="function-description">Adds a point to the scene at the specified coordinates.</div>
+            <div class="function-params">
+              <div><span class="param-name">lon:</span> Longitude in degrees</div>
+              <div><span class="param-name">lat:</span> Latitude in degrees</div>
+              <div><span class="param-name">height:</span> Height in meters</div>
+            </div>
+          </div>
+          
+          <div class="function-doc">
+            <div class="function-name">addModel(lon, lat, height, modelUrl)</div>
+            <div class="function-description">Adds a 3D model to the scene at the specified coordinates.</div>
+            <div class="function-params">
+              <div><span class="param-name">lon:</span> Longitude in degrees</div>
+              <div><span class="param-name">lat:</span> Latitude in degrees</div>
+              <div><span class="param-name">height:</span> Height in meters</div>
+              <div><span class="param-name">modelUrl:</span> URL or path to the 3D model file</div>
+            </div>
+          </div>
+          
+          <div class="function-doc">
+            <div class="function-name">flyTo(lon, lat, height = 1000)</div>
+            <div class="function-description">Animates the camera to fly to the specified location.</div>
+            <div class="function-params">
+              <div><span class="param-name">lon:</span> Longitude in degrees</div>
+              <div><span class="param-name">lat:</span> Latitude in degrees</div>
+              <div><span class="param-name">height:</span> (Optional) Camera height in meters (default: 1000)</div>
+            </div>
+          </div>
+          
+          <div class="function-doc">
+            <div class="function-name">initScene()</div>
+            <div class="function-description">Initializes the scene with default settings and sample entities.</div>
+          </div>
+          
+          <div class="function-doc">
+            <div class="function-name">createSensorEntity(sensorParam, position)</div>
+            <div class="function-description">Creates a sensor entity in the scene.</div>
+            <div class="function-params">
+              <div><span class="param-name">sensorParam:</span> Sensor parameters object</div>
+              <div><span class="param-name">position:</span> Cesium Cartesian3 position</div>
+            </div>
+          </div>
+          
+          <div class="function-doc">
+            <div class="function-name">makeEntityDraggable(entity)</div>
+            <div class="function-description">Makes an entity draggable on the scene.</div>
+            <div class="function-params">
+              <div><span class="param-name">entity:</span> The Cesium entity to make draggable</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main content area -->
+    <div class="main-content">
+      <!-- Top toolbar -->
+      <div class="top-toolbar">
+        <h1 class="app-title">OPENQQUANTIFY Digital Twin IDE</h1>
+        <div class="toolbar-controls">
+          <button class="btn btn-sm" id="runButton">
+            <i class="fas fa-play"></i> Run
+          </button>
+          <button class="btn btn-sm" id="stopButton">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+          <button class="btn btn-sm" id="aiAssistantButton">
+            <i class="fas fa-robot"></i> AI Assistant
+          </button>
+        </div>
+      </div>
+      
+      <!-- Editor and Preview -->
+      <div class="editor-container">
+        <div class="code-editor">
+          <div class="editor-toolbar">
+            <h3 class="editor-title" id="editorTitle">main.js</h3>
+            <div class="editor-actions">
+              <button class="btn btn-sm" id="saveButton">
+                <i class="fas fa-save"></i> Save
+              </button>
+            </div>
+          </div>
+          <textarea id="codeEditor">// Digital Twin Scripting Environment
+// Access the Cesium viewer with the 'viewer' variable
 
-    <!-- AI Assistant -->
-    <section class="panel">
-      <h3>AI Assistant</h3>
-      <textarea
-        id="aiInput"
-        placeholder="Ask AI to move camera, add sensors, or generate code…"
-      ></textarea>
-      <button id="askAiBtn" class="btn primary">
-        <i class="fas fa-robot"></i> Ask AI
-      </button>
-    </section>
+// Example: Add a simple point to the scene
+function addPoint(lon, lat, height) {
+  return viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+    point: {
+      pixelSize: 10,
+      color: Cesium.Color.RED,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 2
+    }
+  });
+}
 
-    <!-- Quick Actions -->
-    <section class="panel">
-      <h3>Quick Actions</h3>
-      <button id="centerHome" class="btn outline">
-        <i class="fas fa-home"></i> Home Camera
-      </button>
-      <button id="clearEntities" class="btn outline">
-        <i class="fas fa-trash"></i> Clear Entities
-      </button>
-    </section>
-  </aside>
+// Example: Add a 3D model
+function addModel(lon, lat, height, modelUrl) {
+  return viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+    model: {
+      uri: modelUrl,
+      minimumPixelSize: 128,
+      maximumScale: 20000
+    }
+  });
+}
 
-  <!-- =========================
-       Cesium Viewer
-  ========================== -->
-  <main id="viewer"></main>
+// Example: Fly to a location
+function flyTo(lon, lat, height = 1000) {
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+    orientation: {
+      heading: Cesium.Math.toRadians(0.0),
+      pitch: Cesium.Math.toRadians(-45.0),
+      roll: 0.0
+    }
+  });
+}
 
-  <!-- =========================
-       Code Editor
-  ========================== -->
-  <aside id="editor-container">
-    <div class="editor-header">
-      <span class="editor-title">main.js</span>
-      <button id="saveButton" class="btn outline">
-        <i class="fas fa-save"></i> Save
-      </button>
+// Initialize the scene
+function initScene() {
+  // Set initial camera position
+  flyTo(-74.0060, 40.7128, 5000);
+  
+  // Add a sample point
+  addPoint(-74.0060, 40.7128, 100);
+  
+  console.log("Digital Twin environment initialized");
+}
+
+// Run the initialization when the script loads
+initScene();</textarea>
+        </div>
+        
+        <div class="preview-pane">
+          <!-- Cesium Container -->
+          <div id="cesiumContainer"></div>
+          
+          <!-- Console -->
+          <div class="console-container">
+            <div class="console-header">
+              <h3 class="console-title">Console</h3>
+              <button class="console-clear" id="clearConsole">
+                <i class="fas fa-trash-alt"></i> Clear
+              </button>
+            </div>
+            <div class="console-content" id="consoleOutput"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Properties Panel -->
+    <div class="properties-panel" id="propertiesPanel">
+      <div class="properties-header">
+        <h3 class="properties-title">Entity Properties</h3>
+        <button class="properties-close" id="closePropertiesPanel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="properties-content" id="propertiesContent">
+        <div class="property-row">
+          <label class="property-label">Name</label>
+          <input type="text" class="property-input" id="entityName">
+        </div>
+        <div class="property-row">
+          <label class="property-label">Position (Longitude)</label>
+          <input type="number" class="property-input" id="entityLon">
+        </div>
+        <div class="property-row">
+          <label class="property-label">Position (Latitude)</label>
+          <input type="number" class="property-input" id="entityLat">
+        </div>
+        <div class="property-row">
+          <label class="property-label">Height (meters)</label>
+          <input type="number" class="property-input" id="entityHeight">
+        </div>
+        <button class="btn btn-sm" id="updateEntity" style="margin-top: 10px;">
+          <i class="fas fa-save"></i> Update
+        </button>
+        <button class="btn btn-sm btn-outline" id="deleteEntity" style="margin-top: 5px;">
+          <i class="fas fa-trash-alt"></i> Delete
+        </button>
+      </div>
+    </div>
+    
+    <!-- AI Assistant Panel -->
+    <div class="ai-assistant-panel" id="aiAssistantPanel">
+      <div class="ai-assistant-header">
+        <h3 class="ai-assistant-title">AI Assistant</h3>
+        <button class="ai-assistant-close" id="closeAIAssistantPanel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="ai-assistant-content" id="aiAssistantContent">
+        <div class="ai-message ai-assistant">
+          Hello! I'm your Cesium AI assistant. How can I help you with your digital twin today? You can ask me to:
+          <ul>
+            <li>Show specific locations (e.g., "Show me the Eiffel Tower")</li>
+            <li>Add entities to the scene</li>
+            <li>Explain Cesium functions</li>
+            <li>Help with your code</li>
+          </ul>
+        </div>
+      </div>
+      <div class="ai-input-container">
+        <input type="text" class="ai-input" id="aiInput" placeholder="Ask me anything about Cesium...">
+        <button class="ai-send" id="aiSend"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+    
+    <!-- Upload Modal -->
+    <div class="upload-modal" id="uploadModal">
+      <div class="upload-content">
+        <h3 class="upload-header">Upload 3D Model</h3>
+        <form class="upload-form" id="uploadForm">
+          <div class="form-group">
+            <label class="form-label">Model Name</label>
+            <input type="text" class="form-input" id="modelName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model File (GLTF/GLB)</label>
+            <input type="file" class="form-input" id="modelFile" accept=".gltf,.glb" style="display: none;" required>
+            <button type="button" class="btn btn-sm" id="selectModelFile" style="margin-top: 5px;">
+              <i class="fas fa-folder-open"></i> Select Model File
+            </button>
+            <span id="selectedFileName" style="margin-left: 10px; font-size: 12px;">No file selected</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Position (Longitude)</label>
+            <input type="number" class="form-input" id="modelLon" value="-74.0060" step="0.0001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Position (Latitude)</label>
+            <input type="number" class="form-input" id="modelLat" value="40.7128" step="0.0001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Height (meters)</label>
+            <input type="number" class="form-input" id="modelHeight" value="100">
+          </div>
+          <div class="upload-actions">
+            <button type="button" class="btn btn-outline" id="cancelUpload">
+              Cancel
+            </button>
+            <button type="submit" class="btn" id="confirmUpload">
+              Upload
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
-    <textarea id="editor"></textarea>
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+  </div>
+<script>
+// Initialize Cesium with proper configuration
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlNmQzM2IzYy1iNmZmLTQzOTAtODI5NC00MzE2MzY1MTdmOGQiLCJpZCI6MjQxODYyLCJpYXQiOjE3MjY0NTk1MjJ9.XhN4UNgKITt-KoENllwyeEe5CCfcr5QZ1L90ToHUt14';
 
-    <div class="editor-actions">
-      <button id="runButton" class="btn primary">
-        <i class="fas fa-play"></i> Run
-      </button>
-      <button id="stopButton" class="btn outline">
-        <i class="fas fa-stop"></i> Stop
-      </button>
-    </div>
+// Global variables
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  terrain: Cesium.Terrain.fromWorldTerrain(),
+  animation: false,
+  timeline: false,
+  shouldAnimate: false,
+  infoBox: false,
+  selectionIndicator: false,
+  shadows: true,
+  baseLayerPicker: false,
+  navigationHelpButton: false,
+  homeButton: false,
+  sceneModePicker: false,
+  geocoder: false,
+  skyAtmosphere: false,
+  skyBox: false
+});
 
-    <div id="consoleOutput" class="console-body"></div>
-  </aside>
+// State management
+const state = {
+  entities: [],
+  selectedEntity: null,
+  uploadedModels: {},
+  activeHandlers: [],
+  isAICodeExecutionEnabled: true,
+  currentFile: 'main.js'
+};
 
-</div><!-- CodeMirror (GLOBAL LIB) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+// Enhanced scene setup
+function initializeScene() {
+  viewer.scene.globe.enableLighting = true;
+  viewer.scene.globe.depthTestAgainstTerrain = true;
+  viewer.scene.fog.enabled = true;
+  viewer.scene.highDynamicRange = true;
+  
+  // Load OSM buildings
+  Cesium.createOsmBuildingsAsync()
+    .then(buildingTileset => viewer.scene.primitives.add(buildingTileset))
+    .catch(error => console.error('Error loading buildings:', error));
 
-<!-- App Entry (MODULE) -->
-<script type="module"
-  src="{{ url_for('static', filename='js/main.js') }}">
+  // Set initial camera position
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(-74.0060, 40.7128, 2000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0.0),
+      pitch: Cesium.Math.toRadians(-45.0),
+      roll: 0.0
+    }
+  });
+}
+
+// Initialize CodeMirror editor
+const codeEditor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+  mode: 'javascript',
+  theme: 'dracula',
+  lineNumbers: true,
+  autoCloseBrackets: true,
+  matchBrackets: true,
+  extraKeys: {
+    'Ctrl-Space': 'autocomplete',
+    'Ctrl-Enter': runCode
+  }
+});
+
+// Sensor Parameters Configuration
+const sensorParameters = {
+  Ultrasonic: {
+    type: "cone",
+    description: "Measures distance using ultrasonic sound waves",
+    minRange: 0.1,
+    maxRange: 10,
+    defaultRange: 5,
+    minFov: 5,
+    maxFov: 60,
+    defaultFov: 30,
+    unit: "m",
+    color: "#00a8ff"
+  },
+  Radar: {
+    type: "cone",
+    description: "Radio detection and ranging system",
+    minRange: 1,
+    maxRange: 1000,
+    defaultRange: 500,
+    minFov: 1,
+    maxFov: 45,
+    defaultFov: 15,
+    unit: "m",
+    color: "#ff9f1c"
+  },
+  LiDAR: {
+    type: "cone",
+    description: "Light detection and ranging system",
+    minRange: 0.5,
+    maxRange: 200,
+    defaultRange: 100,
+    minFov: 0.5,
+    maxFov: 30,
+    defaultFov: 10,
+    unit: "m",
+    color: "#2ecc71"
+  },
+  Proximity: {
+    type: "sphere",
+    description: "Detects objects within a spherical range",
+    minRange: 0.1,
+    maxRange: 50,
+    defaultRange: 10,
+    unit: "m",
+    color: "#9b59b6"
+  },
+  Temperature: {
+    type: "point",
+    description: "Measures ambient temperature",
+    color: "#e74c3c"
+  },
+  Humidity: {
+    type: "point",
+    description: "Measures relative humidity",
+    color: "#3498db"
+  },
+  Pressure: {
+    type: "point",
+    description: "Measures atmospheric pressure",
+    color: "#1abc9c"
+  }
+};
+
+// Core Functions ==============================================
+
+function runCode() {
+  try {
+    cleanupEventHandlers();
+    clearSceneEntities();
+    
+    const code = codeEditor.getValue();
+    const safeCode = sanitizeCode(code);
+    
+    const func = new Function('viewer', 'Cesium', 'console', safeCode);
+    
+    const customConsole = {
+      log: (...args) => outputToConsole(args.join(' '), 'log'),
+      error: (...args) => outputToConsole(args.join(' '), 'error'),
+      warn: (...args) => outputToConsole(args.join(' '), 'warning')
+    };
+    
+    func(viewer, Cesium, customConsole);
+    outputToConsole('Code executed successfully', 'success');
+  } catch (error) {
+    outputToConsole(`Execution error: ${error.message}`, 'error');
+    console.error(error);
+  }
+}
+
+function sanitizeCode(code) {
+  const forbiddenPatterns = [
+    /eval\(/gi, /new Function\(/gi, /document\./gi, 
+    /window\./gi, /localStorage/gi, /XMLHttpRequest/gi,
+    /fetch\(/gi, /\.innerHTML/gi, /import\(/gi, /require\(/gi
+  ];
+  
+  forbiddenPatterns.forEach(pattern => {
+    if (pattern.test(code)) {
+      throw new Error("Code contains forbidden patterns");
+    }
+  });
+  
+  return code;
+}
+
+function cleanupEventHandlers() {
+  state.activeHandlers.forEach(handler => {
+    if (handler?.destroy) handler.destroy();
+  });
+  state.activeHandlers = [];
+}
+
+function clearSceneEntities() {
+  viewer.entities.removeAll();
+  state.entities = [];
+}
+
+// UI Functions ================================================
+
+function initializeUI() {
+  // Tab functionality
+  document.querySelectorAll('.sidebar-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      tab.classList.add('active');
+      document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+    });
+  });
+
+  // File explorer
+  document.querySelectorAll('.file-item').forEach(item => {
+    item.addEventListener('click', () => loadFileContent(item.dataset.file));
+  });
+
+  // Buttons
+  document.getElementById('runButton').addEventListener('click', runCode);
+  document.getElementById('stopButton').addEventListener('click', stopExecution);
+  document.getElementById('saveButton').addEventListener('click', () => outputToConsole('Code saved', 'info'));
+  document.getElementById('clearConsole').addEventListener('click', () => {
+    document.getElementById('consoleOutput').textContent = '';
+  });
+
+  // Upload modal
+  setupUploadModal();
+
+  // Properties panel
+  setupPropertiesPanel();
+
+  // Toggle sidebar
+  document.getElementById('toggleSidebar').addEventListener('click', toggleSidebar);
+
+  // AI Assistant
+  setupAIAssistant();
+
+  // Entity selection
+  setupEntitySelection();
+
+  // Sensor drag and drop
+  setupSensorDragDrop();
+}
+
+function loadFileContent(filename) {
+  state.currentFile = filename;
+  document.getElementById('editorTitle').textContent = filename;
+  
+  if (filename === 'scene.js') {
+    codeEditor.setValue(`// Scene Configuration
+function configureScene() {
+  // Set lighting
+  viewer.scene.globe.enableLighting = true;
+  viewer.scene.shadowMap.enabled = true;
+  
+  // Set atmosphere effects
+  viewer.scene.skyAtmosphere.show = true;
+  viewer.scene.fog.enabled = true;
+  
+  console.log("Scene configured");
+}
+
+configureScene();`);
+  } 
+  else if (filename === 'main.js') {
+    codeEditor.setValue(`// Digital Twin Scripting Environment
+// Access the Cesium viewer with the 'viewer' variable
+
+// Example: Add a simple point to the scene
+function addPoint(lon, lat, height) {
+  return viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+    point: {
+      pixelSize: 10,
+      color: Cesium.Color.RED,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 2
+    }
+  });
+}
+
+// Example: Add a 3D model
+function addModel(lon, lat, height, modelUrl) {
+  return viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+    model: {
+      uri: modelUrl,
+      minimumPixelSize: 128,
+      maximumScale: 20000
+    }
+  });
+}
+
+// Example: Fly to a location
+function flyTo(lon, lat, height = 1000) {
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+    orientation: {
+      heading: Cesium.Math.toRadians(0.0),
+      pitch: Cesium.Math.toRadians(-45.0),
+      roll: 0.0
+    }
+  });
+}
+
+// Initialize the scene
+function initScene() {
+  // Set initial camera position
+  flyTo(-74.0060, 40.7128, 5000);
+  
+  // Add a sample point
+  addPoint(-74.0060, 40.7128, 100);
+  
+  console.log("Digital Twin environment initialized");
+}
+
+initScene();`);
+  }
+  else if (state.uploadedModels[filename]) {
+    const model = state.uploadedModels[filename];
+    const pos = model.entity.position.getValue(viewer.clock.currentTime);
+    const cartographic = Cesium.Cartographic.fromCartesian(pos);
+    const lon = Cesium.Math.toDegrees(cartographic.longitude);
+    const lat = Cesium.Math.toDegrees(cartographic.latitude);
+    const height = cartographic.height;
+    
+    codeEditor.setValue(`// ${filename} Model Configuration
+function configureModel() {
+  const model = viewer.entities.add({
+    name: "${filename}",
+    position: Cesium.Cartesian3.fromDegrees(${lon}, ${lat}, ${height}),
+    model: {
+      uri: "${model.url}",
+      minimumPixelSize: 128,
+      maximumScale: 20000
+    }
+  });
+  
+  console.log("Model '${filename}' configured");
+}
+
+configureModel();`);
+  }
+}
+
+function stopExecution() {
+  if (viewer.camera.currentFlight) {
+    viewer.camera.currentFlight.cancel();
+  }
+  clearSceneEntities();
+  cleanupEventHandlers();
+  outputToConsole('Execution stopped', 'info');
+}
+
+// Entity Management ===========================================
+
+function makeEntityDraggable(entity) {
+  let isDragging = false;
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+  handler.setInputAction(click => {
+    const pickedObject = viewer.scene.pick(click.position);
+    if (Cesium.defined(pickedObject) && pickedObject.id === entity) {
+      isDragging = true;
+      viewer.scene.screenSpaceCameraController.enableRotate = false;
+      viewer.canvas.style.cursor = 'move';
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+  handler.setInputAction(movement => {
+    if (isDragging) {
+      const ray = viewer.camera.getPickRay(movement.endPosition);
+      const position = viewer.scene.globe.pick(ray, viewer.scene);
+      if (position) {
+        entity.position = position;
+        updatePropertiesPanelIfOpen(entity);
+      }
+    }
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+  handler.setInputAction(() => {
+    if (isDragging) {
+      isDragging = false;
+      viewer.scene.screenSpaceCameraController.enableRotate = true;
+      viewer.canvas.style.cursor = 'default';
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_UP);
+  
+  state.activeHandlers.push(handler);
+}
+
+function updatePropertiesPanelIfOpen(entity) {
+  if (state.selectedEntity === entity) {
+    const cartographic = Cesium.Cartographic.fromCartesian(entity.position);
+    document.getElementById('entityLon').value = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+    document.getElementById('entityLat').value = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+    document.getElementById('entityHeight').value = cartographic.height.toFixed(2);
+  }
+}
+
+// Upload Modal ================================================
+
+function setupUploadModal() {
+  document.getElementById('uploadModelBtn').addEventListener('click', () => {
+    document.getElementById('uploadModal').style.display = 'flex';
+  });
+
+  document.getElementById('cancelUpload').addEventListener('click', () => {
+    document.getElementById('uploadModal').style.display = 'none';
+  });
+
+  document.getElementById('selectModelFile').addEventListener('click', () => {
+    document.getElementById('modelFile').click();
+  });
+
+  document.getElementById('modelFile').addEventListener('change', (e) => {
+    document.getElementById('selectedFileName').textContent = 
+      e.target.files[0]?.name || 'No file selected';
+  });
+
+  document.getElementById('uploadForm').addEventListener('submit', handleModelUpload);
+}
+
+async function handleModelUpload(e) {
+  e.preventDefault();
+  
+  const modelName = document.getElementById('modelName').value;
+  const lon = parseFloat(document.getElementById('modelLon').value);
+  const lat = parseFloat(document.getElementById('modelLat').value);
+  const height = parseFloat(document.getElementById('modelHeight').value);
+  const modelFile = document.getElementById('modelFile').files[0];
+  
+  if (!modelFile) {
+    outputToConsole('Error: No model file selected', 'error');
+    return;
+  }
+  
+  try {
+    outputToConsole(`Uploading model: ${modelName}...`, 'info');
+    
+    const modelUrl = URL.createObjectURL(modelFile);
+    const entity = viewer.entities.add({
+      name: modelName,
+      position: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+      model: {
+        uri: modelUrl,
+        minimumPixelSize: 128,
+        maximumScale: 20000
+      },
+      draggable: true
+    });
+    
+    makeEntityDraggable(entity);
+    state.entities.push(entity);
+    state.uploadedModels[modelName] = { url: modelUrl, entity };
+    
+    updateEntitiesList();
+    addModelToFileList(modelName, modelUrl);
+    
+    outputToConsole(`Added model: ${modelName} at (${lon}, ${lat}, ${height})`, 'success');
+    document.getElementById('uploadModal').style.display = 'none';
+    document.getElementById('uploadForm').reset();
+    document.getElementById('selectedFileName').textContent = 'No file selected';
+    
+    viewer.flyTo(entity);
+  } catch (error) {
+    outputToConsole(`Error uploading model: ${error.message}`, 'error');
+    console.error(error);
+  }
+}
+
+function addModelToFileList(name, url) {
+  const fileExplorer = document.querySelector('.file-explorer');
+  const newItem = document.createElement('li');
+  newItem.className = 'file-item';
+  newItem.dataset.file = name;
+  newItem.innerHTML = `<i class="fas fa-cube"></i> ${name}`;
+  newItem.addEventListener('click', () => loadFileContent(name));
+  fileExplorer.appendChild(newItem);
+}
+
+// Properties Panel ============================================
+
+function setupPropertiesPanel() {
+  document.getElementById('closePropertiesPanel').addEventListener('click', () => {
+    document.getElementById('propertiesPanel').style.display = 'none';
+    state.selectedEntity = null;
+  });
+
+  document.getElementById('updateEntity').addEventListener('click', updateEntity);
+  document.getElementById('deleteEntity').addEventListener('click', deleteEntity);
+}
+
+function showPropertiesPanel(entity) {
+  state.selectedEntity = entity;
+  const cartographic = Cesium.Cartographic.fromCartesian(entity.position.getValue(viewer.clock.currentTime));
+  
+  document.getElementById('entityName').value = entity.name || '';
+  document.getElementById('entityLon').value = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+  document.getElementById('entityLat').value = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+  document.getElementById('entityHeight').value = cartographic.height.toFixed(2);
+  document.getElementById('propertiesPanel').style.display = 'block';
+}
+
+function updateEntity() {
+  if (!state.selectedEntity) return;
+  
+  const name = document.getElementById('entityName').value;
+  const lon = parseFloat(document.getElementById('entityLon').value);
+  const lat = parseFloat(document.getElementById('entityLat').value);
+  const height = parseFloat(document.getElementById('entityHeight').value);
+  
+  state.selectedEntity.name = name;
+  state.selectedEntity.position = Cesium.Cartesian3.fromDegrees(lon, lat, height);
+  
+  if (state.uploadedModels[name]) {
+    state.uploadedModels[name].entity = state.selectedEntity;
+  }
+  
+  outputToConsole(`Updated entity: ${name}`, 'success');
+  updateEntitiesList();
+}
+
+function deleteEntity() {
+  if (!state.selectedEntity) return;
+  
+  const name = state.selectedEntity.name || 'Unnamed entity';
+  viewer.entities.remove(state.selectedEntity);
+  state.entities = state.entities.filter(e => e !== state.selectedEntity);
+  
+  if (state.uploadedModels[name]) {
+    URL.revokeObjectURL(state.uploadedModels[name].url);
+    delete state.uploadedModels[name];
+  }
+  
+  state.selectedEntity = null;
+  document.getElementById('propertiesPanel').style.display = 'none';
+  outputToConsole(`Deleted entity: ${name}`, 'success');
+  updateEntitiesList();
+}
+
+function updateEntitiesList() {
+  const entitiesList = document.getElementById('entities-list');
+  entitiesList.innerHTML = '';
+  
+  state.entities.forEach(entity => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.innerHTML = `<i class="fas fa-cube"></i> ${entity.name || 'Unnamed entity'}`;
+    item.addEventListener('click', () => {
+      viewer.flyTo(entity);
+      showPropertiesPanel(entity);
+    });
+    entitiesList.appendChild(item);
+  });
+}
+
+// UI Helpers =================================================
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('collapsed');
+  
+  const icon = document.getElementById('toggleSidebar').querySelector('i');
+  icon.classList.toggle('fa-chevron-left');
+  icon.classList.toggle('fa-chevron-right');
+}
+
+function outputToConsole(message, type = 'log') {
+  const consoleOutput = document.getElementById('consoleOutput');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `log-${type}`;
+  messageDiv.textContent = message;
+  consoleOutput.appendChild(messageDiv);
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+// Entity Selection ===========================================
+
+function setupEntitySelection() {
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+  state.activeHandlers.push(handler);
+
+  handler.setInputAction(movement => {
+    const pickedObject = viewer.scene.pick(movement.endPosition);
+    if (Cesium.defined(pickedObject) && pickedObject.id) {
+      viewer.canvas.style.cursor = 'pointer';
+      showTooltip(movement.endPosition, pickedObject.id.name || 'Click to inspect');
+    } else {
+      viewer.canvas.style.cursor = 'default';
+      hideTooltip();
+    }
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+  handler.setInputAction(click => {
+    const pickedObject = viewer.scene.pick(click.position);
+    if (Cesium.defined(pickedObject) && pickedObject.id) {
+      showPropertiesPanel(pickedObject.id);
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+}
+
+function showTooltip(position, message) {
+  const tooltip = document.getElementById('tooltip');
+  tooltip.style.left = `${position.x + 10}px`;
+  tooltip.style.top = `${position.y + 10}px`;
+  tooltip.textContent = message;
+  tooltip.style.display = 'block';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// Sensor Drag and Drop =======================================
+
+function setupSensorDragDrop() {
+  document.querySelectorAll('.sensor-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      const sensorType = item.getAttribute('data-sensor-type');
+      const sensorShape = item.getAttribute('data-sensor-shape');
+      const sensorParam = { ...sensorParameters[sensorType], shape: sensorShape };
+      e.dataTransfer.setData('application/json', JSON.stringify(sensorParam));
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
+
+  viewer.scene.canvas.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+
+  viewer.scene.canvas.addEventListener('drop', (e) => {
+    e.preventDefault();
+    try {
+      const sensorParam = JSON.parse(e.dataTransfer.getData('application/json'));
+      const pickPosition = new Cesium.Cartesian2(e.offsetX, e.offsetY);
+      const earthPosition = viewer.scene.pickPosition(pickPosition);
+
+      if (Cesium.defined(earthPosition)) {
+        createSensorEntity(sensorParam, earthPosition);
+        outputToConsole(`Added ${sensorParam.type} sensor to scene`, 'success');
+      }
+    } catch (error) {
+      outputToConsole(`Error adding sensor: ${error.message}`, 'error');
+    }
+  });
+}
+
+function createSensorEntity(sensorParam, position) {
+  const entityOptions = {
+    position: position,
+    name: `${sensorParam.type} Sensor`,
+    description: sensorParam.description,
+    label: {
+      text: sensorParam.type,
+      font: '14pt sans-serif',
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      fillColor: Cesium.Color.WHITE,
+      outlineColor: Cesium.Color.BLACK,
+      outlineWidth: 2,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      pixelOffset: new Cesium.Cartesian2(0, -20),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
+  };
+
+  switch (sensorParam.shape) {
+    case 'cone':
+      entityOptions.cylinder = {
+        length: sensorParam.defaultRange,
+        topRadius: 0,
+        bottomRadius: sensorParam.defaultRange * Math.tan(Cesium.Math.toRadians(sensorParam.defaultFov / 2)),
+        material: Cesium.Color.fromCssColorString(sensorParam.color).withAlpha(0.4),
+        outline: true,
+        outlineColor: Cesium.Color.WHITE,
+        slices: 64
+      };
+      break;
+    case 'sphere':
+      entityOptions.ellipsoid = {
+        radii: new Cesium.Cartesian3(sensorParam.defaultRange, sensorParam.defaultRange, sensorParam.defaultRange),
+        material: Cesium.Color.fromCssColorString(sensorParam.color).withAlpha(0.3),
+        outline: true,
+        outlineColor: Cesium.Color.WHITE
+      };
+      break;
+    case 'point':
+      entityOptions.point = {
+        pixelSize: 10,
+        color: Cesium.Color.fromCssColorString(sensorParam.color),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      };
+      break;
+  }
+
+  const entity = viewer.entities.add(entityOptions);
+  state.entities.push(entity);
+  updateEntitiesList();
+  return entity;
+}
+
+// AI Assistant ===============================================
+
+function setupAIAssistant() {
+  document.getElementById('aiAssistantButton').addEventListener('click', () => {
+    document.getElementById('aiAssistantPanel').style.display = 'block';
+    document.getElementById('aiInput').focus();
+  });
+
+  document.getElementById('closeAIAssistantPanel').addEventListener('click', () => {
+    document.getElementById('aiAssistantPanel').style.display = 'none';
+  });
+
+  document.getElementById('aiSend').addEventListener('click', processAIQuery);
+  document.getElementById('aiInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') processAIQuery();
+  });
+}
+
+async function processAIQuery() {
+  const input = document.getElementById('aiInput');
+  const query = input.value.trim();
+  if (!query) return;
+  
+  addAIMessage(query, 'user');
+  input.value = '';
+  
+  try {
+    // Handle special commands first
+    if (await handleSpecialCommands(query)) return;
+    
+    // Show "thinking" message
+    addAIMessage("Thinking...", 'assistant');
+    
+    // Process with AI - UPDATED CODE BELOW
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-nano",
+        messages: [
+          {
+            role: "system",
+             content: `You are an advanced Cesium IDE assistant with these capabilities:
+1. FULL CODE EDITING - Can modify any code in the editor
+2. SCENE CONTROL - Can manipulate the 3D scene
+3. SIMULATION - Can create dynamic simulations
+4. TEACHING - Explain concepts with examples
+
+Available Functions:
+- addPoint(lon, lat, height, color)
+- addModel(lon, lat, height, url)
+- flyTo(lon, lat, height)
+- createPolyline(positions, color)
+- createPolygon(positions, color)
+- createSensor(type, position)
+- animateEntity(entity, path, duration)
+
+Rules:
+1. Always wrap executable code in \`\`\`javascript blocks
+2. When modifying code, show complete working examples
+3. For complex changes, explain the changes first
+4. Never use eval() or dangerous functions
+5. always answer any thing`
+          },
+
+          { role: "user", content: query }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    // Check for API errors
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'API request failed');
+    }
+    
+    const data = await response.json();
+    if (data.choices?.[0]?.message?.content) {
+      // Remove the "Thinking..." message
+      const contentDiv = document.getElementById('aiAssistantContent');
+      contentDiv.removeChild(contentDiv.lastChild);
+      
+      handleAIResponse(data.choices[0].message.content, query);
+    } else {
+      throw new Error('No response content from AI');
+    }
+  } catch (error) {
+    // Remove "Thinking..." message if it exists
+    const contentDiv = document.getElementById('aiAssistantContent');
+    if (contentDiv.lastChild.textContent === "Thinking...") {
+      contentDiv.removeChild(contentDiv.lastChild);
+    }
+    
+    addAIMessage(`AI Error: ${error.message}`, 'assistant');
+    console.error('AI Error Details:', error);
+    
+    // Add troubleshooting suggestion
+    addAIMessage("Troubleshooting: 1) Check API key 2) Verify network 3) Ensure CORS isn't blocking", 'assistant');
+  }
+}
+
+async function handleSpecialCommands(query) {
+  const lowerQuery = query.toLowerCase();
+  
+  // Location commands
+  if (lowerQuery.includes('show me') || lowerQuery.includes('fly to') || lowerQuery.includes('take me to')) {
+    await handleLocationQuery(query);
+    return true;
+  }
+  
+  // Clear commands
+  if (lowerQuery.includes('clear scene')) {
+    stopExecution();
+    addAIMessage("Scene cleared", 'assistant');
+    return true;
+  }
+  
+  if (lowerQuery.includes('clear console')) {
+    document.getElementById('consoleOutput').textContent = '';
+    addAIMessage("Console cleared", 'assistant');
+    return true;
+  }
+  
+  // Help command
+  if (lowerQuery.includes('help') || lowerQuery === '?') {
+    showHelp();
+    return true;
+  }
+  
+  // Toggle code execution
+  if (lowerQuery.includes('disable ai code')) {
+    state.isAICodeExecutionEnabled = false;
+    addAIMessage("AI code execution is now disabled", 'assistant');
+    return true;
+  }
+  
+  if (lowerQuery.includes('enable ai code')) {
+    state.isAICodeExecutionEnabled = true;
+    addAIMessage("AI code execution is now enabled", 'assistant');
+    return true;
+  }
+  
+  return false;
+}
+
+function showHelp() {
+  addAIMessage(`I can help you with:`, 'assistant');
+  addAIMessage(`1. Code Editing - "Add a rotating 3D model"`, 'assistant');
+  addAIMessage(`2. Scene Control - "Create a grid of points"`, 'assistant');
+  addAIMessage(`3. Simulations - "Simulate drone flight path"`, 'assistant');
+  addAIMessage(`4. Location - "Show me the Eiffel Tower"`, 'assistant');
+  addAIMessage(`5. Learning - "How to add animations?"`, 'assistant');
+  addAIMessage(`Try asking me to modify the code or create simulations!`, 'assistant');
+}
+
+function handleAIResponse(message, originalQuery) {
+  // Check for code blocks first
+  const codeMatch = message.match(/```javascript([\s\S]*?)```/);
+  
+  if (codeMatch && codeMatch[1] && state.isAICodeExecutionEnabled) {
+    const code = codeMatch[1].trim();
+    const responseWithoutCode = message.replace(/```javascript[\s\S]*?```/, '[Code ready for review]');
+    
+    addAIMessage(responseWithoutCode, 'assistant');
+    
+    // Create action buttons
+    const actionDiv = document.createElement('div');
+    actionDiv.className = 'ai-message ai-assistant';
+    actionDiv.innerHTML = `
+      <div class="ai-actions">
+        <button class="btn btn-sm" id="replaceCode">
+          <i class="fas fa-code"></i> Replace Entire Code
+        </button>
+        <button class="btn btn-sm" id="appendCode">
+          <i class="fas fa-plus"></i> Append to Code
+        </button>
+        <button class="btn btn-sm" id="executeOnly">
+          <i class="fas fa-play"></i> Execute Without Saving
+        </button>
+        <button class="btn btn-sm btn-outline" id="copyCode">
+          <i class="fas fa-copy"></i> Copy to Clipboard
+        </button>
+      </div>
+      <div class="code-preview" contenteditable="true">${escapeHtml(code)}</div>
+    `;
+    
+    document.getElementById('aiAssistantContent').appendChild(actionDiv);
+    
+    // Set up button handlers
+    document.getElementById('replaceCode').addEventListener('click', () => {
+      codeEditor.setValue(code);
+      addAIMessage("Code replaced in editor", 'assistant');
+      actionDiv.remove();
+    });
+    
+    document.getElementById('appendCode').addEventListener('click', () => {
+      codeEditor.setValue(codeEditor.getValue() + "\n\n" + code);
+      addAIMessage("Code appended to editor", 'assistant');
+      actionDiv.remove();
+    });
+    
+    document.getElementById('executeOnly').addEventListener('click', () => {
+      const originalCode = codeEditor.getValue();
+      codeEditor.setValue(code);
+      runCode();
+      codeEditor.setValue(originalCode);
+      addAIMessage("Code executed without saving", 'assistant');
+      actionDiv.remove();
+    });
+    
+    document.getElementById('copyCode').addEventListener('click', () => {
+      navigator.clipboard.writeText(code);
+      addAIMessage("Code copied to clipboard", 'assistant');
+      actionDiv.remove();
+    });
+    
+  } else {
+    // No code found, just show the message
+    addAIMessage(message, 'assistant');
+    
+    // If the query was asking for code but didn't get any
+    if (originalQuery.toLowerCase().includes('code') || 
+        originalQuery.toLowerCase().includes('how to') ||
+        originalQuery.toLowerCase().includes('example')) {
+      addAIMessage("Would you like me to generate example code for this?", 'assistant');
+      
+      const followUpDiv = document.createElement('div');
+      followUpDiv.className = 'ai-message ai-assistant';
+      followUpDiv.innerHTML = `
+        <button class="btn btn-sm" id="generateExample">
+          <i class="fas fa-magic"></i> Yes, Generate Code
+        </button>
+      `;
+      
+      document.getElementById('aiAssistantContent').appendChild(followUpDiv);
+      
+      document.getElementById('generateExample').addEventListener('click', () => {
+        processAIQuery(`Generate complete working code for: ${originalQuery}`);
+        followUpDiv.remove();
+      });
+    }
+  }
+}
+
+async function handleLocationQuery(query) {
+  const locationMatch = query.match(/show me (.*)|fly to (.*)|take me to (.*)/i);
+  const location = locationMatch?.[1] || locationMatch?.[2] || locationMatch?.[3];
+  
+  if (!location) {
+    addAIMessage("Please specify a location (e.g., 'Show me Paris')", 'assistant');
+    return;
+  }
+  
+  addAIMessage(`Searching for ${location}...`, 'assistant');
+  
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+    const data = await response.json();
+    
+    if (data.length > 0) {
+      const { lat, lon, display_name } = data[0];
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(parseFloat(lon), parseFloat(lat), 2000),
+        orientation: {
+          heading: Cesium.Math.toRadians(0.0),
+          pitch: Cesium.Math.toRadians(-45.0),
+          roll: 0.0
+        }
+      });
+      addAIMessage(`Found: ${display_name} (${lat}, ${lon})`, 'assistant');
+      
+      // Offer to add a marker
+      const markerDiv = document.createElement('div');
+      markerDiv.className = 'ai-message ai-assistant';
+      markerDiv.innerHTML = `
+        <button class="btn btn-sm" id="addMarker">
+          <i class="fas fa-map-marker-alt"></i> Add Marker at This Location
+        </button>
+      `;
+      document.getElementById('aiAssistantContent').appendChild(markerDiv);
+      
+      document.getElementById('addMarker').addEventListener('click', () => {
+        const markerCode = `// Marker at ${display_name}
+addPoint(${lon}, ${lat}, 100, Cesium.Color.RED);`;
+        codeEditor.setValue(codeEditor.getValue() + "\n\n" + markerCode);
+        runCode();
+        markerDiv.remove();
+      });
+      
+    } else {
+      addAIMessage(`Location not found: ${location}`, 'assistant');
+    }
+  } catch (error) {
+    addAIMessage(`Geocoding error: ${error.message}`, 'assistant');
+  }
+}
+
+function addAIMessage(message, sender) {
+  const contentDiv = document.getElementById('aiAssistantContent');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `ai-message ai-${sender}`;
+  messageDiv.textContent = message;
+  contentDiv.appendChild(messageDiv);
+  contentDiv.scrollTop = contentDiv.scrollHeight;
+}
+
+// Helper function to escape HTML
+function escapeHtml(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+// Initialization =============================================
+
+function initialize() {
+  initializeScene();
+  initializeUI();
+  setTimeout(runCode, 500);
+}
+
+// Start the application
+initialize();
 </script>
+</body>
+</html>
