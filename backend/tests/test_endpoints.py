@@ -13,7 +13,15 @@ def test_health():
 
 
 def test_public_data_returns_list():
+    
     r = client.get("/api/public-data/?lat=37.7749&lng=-122.4194")
     assert r.status_code == 200
     data = r.json()
     assert isinstance(data, list)
+
+
+def test_digital_twin_template_served():
+    """Ensure the FastAPI route that renders the Digital Twin template returns HTML."""
+    r = client.get('/digital-twin')
+    assert r.status_code == 200
+    assert '<div id="viewer"' in r.text

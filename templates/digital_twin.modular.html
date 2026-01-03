@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Digital Twin Platform</title>
+
+    <!-- ===================== -->
+    <!-- Cesium (LOAD FIRST) -->
+    <!-- ===================== -->
+    <script src="https://cdn.jsdelivr.net/npm/cesium@1.121/Build/Cesium/Cesium.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/cesium@1.121/Build/Cesium/Widgets/widgets.css"
+      rel="stylesheet"
+    />
+
+    <!-- ===================== -->
+    <!-- Cesium Ion Token (FIX) -->
+    <!-- ===================== -->
+    <script>
+      window.CESIUM_ION_TOKEN = '{{ CESIUM_ION_TOKEN }}';
+
+      if (window.CESIUM_ION_TOKEN) {
+        Cesium.Ion.defaultAccessToken = window.CESIUM_ION_TOKEN;
+        console.log('Cesium Ion token applied from server');
+      } else {
+        console.warn('Cesium Ion token missing');
+      }
+    </script>
+
+    <!-- ===================== -->
+    <!-- CodeMirror -->
+    <!-- ===================== -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+
+  <body>
+    <!-- ===================== -->
+    <!-- MAIN UI BAR -->
+    <!-- ===================== -->
+    <div id="ui">
+      <input id="searchBox" placeholder="Search location..." list="searchSuggestions" />
+      <datalist id="searchSuggestions"></datalist>
+      <button id="searchBtn">Search</button>
+
+      <button id="startSim">Start</button>
+      <button id="stopSim" disabled>Stop</button>
+
+      <select id="modelSelect">
+        <option value="/static/assets/models/cars/sedan.glb">Car</option>
+        <option value="/static/assets/models/aircraft/airplane.glb">Aircraft</option>
+      </select>
+
+      <button id="placeCar">Place Car</button>
+      <button id="spawnAircraft">Spawn Aircraft</button>
+      <button id="loadBuildings">Load 3D Buildings</button>
+
+      <button id="toggleLabels">Labels</button>
+      <button id="toggleSatellite">Satellite</button>
+
+      <button id="openAiPanel">AI</button>
+    </div>
+
+    <!-- ===================== -->
+    <!-- AI PANEL -->
+    <!-- ===================== -->
+    <div id="ai-panel">
+      <div class="ai-header">AI Command <button id="aiHelpBtn">?</button></div>
+
+      <div
+        id="aiHelp"
+        style="display: none; padding: 6px; background: #111; margin: 6px; border-radius: 4px"
+      >
+        Supported commands:
+        <strong>drive to LAT LON</strong>,
+        <strong>spawn aircraft</strong>
+      </div>
+
+      <textarea id="aiInput" placeholder="e.g. Drive to Lagos Island"></textarea>
+
+      <div style="margin-top: 6px">
+        <div id="aiResponse" style="color: #9cf; overflow-y: auto; max-height: 120px"></div>
+      </div>
+
+      <div style="margin-top: 8px; display: flex; gap: 6px">
+        <button id="askAiBtn">Ask</button>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- Cesium Viewer -->
+    <!-- ===================== -->
+    <div id="viewer"></div>
+
+    <!-- ===================== -->
+    <!-- CORE APP SCRIPT -->
+    <!-- ===================== -->
+    <script type="module">
+      import {
+        initScene,
+        getViewer,
+        enableClickToPlace,
+        disableClickToPlace,
+        load3DBuildings,
+        toggleBuildingsVisibility,
+        toggleSatelliteImagery,
+      } from '/static/js/scene.js';
+
+      import { createSimulation } from '/static/js/simulation/simulation_manager.js';
+
+      import { initGPSUI } from '/static/js/location/gps_ui.js';
+      import { initSearchPanel } from '/static/js/ui/search_panel.js';
+
+      let sim = null;
+      let placing = false;
+      let buildingsLoaded = false;
+
+      window.addEventListener('DOMContentLoaded', async () => {
+        await initScene();
+
+        window.getViewer = getViewer;
+
+        const ready = document.createElement('div');
+        ready.id = 'digitalTwinReady';
+        ready.style.display = 'none';
+        document.body.appendChild(ready);
+        setTimeout(() => (ready.style.display = 'block'), 50);
+
+        const startSimBtn = document.getElementById('startSim');
+        const stopSimBtn = document.getElementById('stopSim');
+
+        startSimBtn.onclick = async () => {
+          sim = createSimulation(getViewer());
+          await sim.start();
+          startSimBtn.disabled = true;
+          stopSimBtn.disabled = false;
+        };
+
+        stopSimBtn.onclick = () => {
+          sim?.stop?.();
+          startSimBtn.disabled = false;
+          stopSimBtn.disabled = true;
+        };
+
+        const placeBtn = document.getElementById('placeCar');
+        placeBtn.onclick = () => {
+          placing = !placing;
+          if (placing) {
+            enableClickToPlace(document.getElementById('modelSelect').value);
+            placeBtn.textContent = 'Stop Placing';
+          } else {
+            disableClickToPlace();
+            placeBtn.textContent = 'Place Car';
+          }
+        };
+
+        document.getElementById('spawnAircraft').onclick = async () => {
+          const v = getViewer();
+          const position = Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 2000);
+          let ent = null;
+          try {
+            const head = await fetch('/static/assets/models/aircraft/airplane.glb', {
+              method: 'HEAD',
+            });
+            const contentLen = head.headers.get('content-length');
+            if (head.ok && contentLen && parseInt(contentLen, 10) > 50) {
+              ent = v.entities.add({
+                id: `aircraft-${Date.now()}`,
+                name: 'aircraft',
+                position,
+                model: { uri: '/static/assets/models/aircraft/airplane.glb' },
+              });
+            } else {
+              ent = v.entities.add({
+                id: `aircraft-${Date.now()}`,
+                name: 'aircraft',
+                position,
+                point: { pixelSize: 12, color: Cesium.Color.WHITE },
+              });
+            }
+          } catch (e) {
+            ent = v.entities.add({
+              id: `aircraft-${Date.now()}`,
+              name: 'aircraft',
+              position,
+              point: { pixelSize: 12, color: Cesium.Color.WHITE },
+            });
+          }
+
+          // Register as an active vehicle and enable lightweight physics so it responds to autopilot
+          try {
+            const mod = await import('/static/js/simulation/simulation_manager.js');
+            const phys = await import('/static/js/physics_bridge.js');
+            const veh = mod.setActiveVehicleFromEntity(ent);
+            try {
+              phys.enablePhysics(ent, { mass: 800, drag: 0.01, playerControlled: false });
+            } catch (e) {
+              console.warn('Failed to enable physics on aircraft', e);
+            }
+          } catch (e) {
+            console.warn('Aircraft registration failed', e);
+          }
+        };
+
+        const loadBtn = document.getElementById('loadBuildings');
+        loadBtn.onclick = async () => {
+          if (!buildingsLoaded) {
+            await load3DBuildings();
+            loadBtn.textContent = 'Unload 3D Buildings';
+            buildingsLoaded = true;
+          } else {
+            toggleBuildingsVisibility(false);
+            loadBtn.textContent = 'Load 3D Buildings';
+            buildingsLoaded = false;
+          }
+        };
+
+        document.getElementById('toggleSatellite').onclick = () => {
+          const enabled = document.getElementById('toggleSatellite').dataset.enabled === '1';
+          toggleSatelliteImagery(!enabled);
+          document.getElementById('toggleSatellite').dataset.enabled = enabled ? '0' : '1';
+        };
+
+        try {
+          initGPSUI(getViewer());
+        } catch (e) {
+          console.warn('GPS UI init failed', e);
+        }
+
+        // Initialize search panel (nominatim-based autocompletion + flyTo)
+        try {
+          initSearchPanel();
+        } catch (e) {
+          console.warn('Search panel init failed', e);
+        }
+
+        const aiBtn = document.getElementById('openAiPanel');
+        const aiPanel = document.getElementById('ai-panel');
+        aiBtn.onclick = () => aiPanel.classList.toggle('open');
+
+        document.getElementById('aiHelpBtn').onclick = () => {
+          const h = document.getElementById('aiHelp');
+          h.style.display = h.style.display === 'none' ? 'block' : 'none';
+        };
+
+        // Toggle labels for entities
+        document.getElementById('toggleLabels').onclick = () => {
+          const btn = document.getElementById('toggleLabels');
+          const enabled = btn.dataset.enabled === '1';
+          const view = getViewer();
+          if (!view) return;
+          for (const e of view.entities.values) {
+            if (e.label) {
+              try {
+                e.label.show = !enabled;
+              } catch (err) {}
+            }
+          }
+          btn.dataset.enabled = enabled ? '0' : '1';
+        };
+
+        document.getElementById('askAiBtn').onclick = async () => {
+          const cmd = document.getElementById('aiInput').value.trim();
+          if (!cmd) return;
+
+          const res = await fetch('/ai_query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: cmd }),
+          });
+
+          const js = await res.json();
+          const respEl = document.getElementById('aiResponse');
+          respEl.textContent = js.message || 'AI response received';
+
+          // structured action support: prefer js.action.type === 'drive'
+          try {
+            const action = js.action || (js.action && js.action.driveTo) || null;
+            if (action && action.type === 'drive') {
+              const { lat, lon } = action;
+              const mod = await import('/static/js/simulation/simulation_manager.js');
+              const veh = mod.getActiveVehicle();
+              if (veh) veh.followWaypoints([{ lon, lat, alt: 0 }], 30);
+            } else {
+              // fallback to text parsing for coords e.g. "40.7128 -74.006"
+              const m = (js.message || '').match(/([-0-9\.]+)\s+([-0-9\.]+)/);
+              if (m) {
+                const lat = parseFloat(m[1]);
+                const lon = parseFloat(m[2]);
+                const mod = await import('/static/js/simulation/simulation_manager.js');
+                const veh = mod.getActiveVehicle();
+                if (veh) veh.followWaypoints([{ lon, lat, alt: 0 }], 30);
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to handle AI action', e);
+          }
+        };
+      });
+    </script>
+  </body>
+</html>

@@ -66,7 +66,47 @@ The backend exposes a small public API for demo and integration purposes. These 
 ## 🧪 Tests & Development
 
 - Added simple pytest tests for `/health` and `/api/public-data` (`backend/tests/test_endpoints.py`).
-- To run tests: `pip install -r backend/requirements.txt` then `pytest backend/tests`.
+- To run backend tests: `pip install -r backend/requirements.txt` then `pytest backend/tests`.
+
+- Playwright E2E tests (frontend): the project includes Playwright tests to validate the Digital Twin UI. To run them locally:
+  - From repo root: `cd frontend`
+  - Install node deps: `npm install`
+  - Install Playwright browsers: `npx playwright install`
+  - Run tests: `npm run test:e2e` (or `npx playwright test`)
+  - Note: Tests stub the Nominatim search endpoint so they do not rely on external network services.
+
+Cesium Ion & 3D buildings
+
+- Place your Cesium Ion token in `.env` as `CESIUM_ION_TOKEN` (the Flask and FastAPI servers read this variable and pass it to the front-end templates).
+- When a token is available the UI will prefer Cesium World Imagery/World Terrain and can load Ion 3D tilesets (e.g. NYC buildings) via the **Load 3D Buildings** button.
+
+Search autocomplete
+
+- The search box uses Nominatim to fetch suggestions as you type and populates a datalist. To run the E2E test that validates this, Playwright stubs the Nominatim endpoint.
+
+Click-to-place objects
+
+- Use the **Place Car** button to toggle placement mode, then click on the globe to place a sample car model (`/static/assets/models/cars/sedan.glb`).
+
+Fixes and notes relevant to UI bugs discovered:
+
+- Fixed a CodeMirror initialization bug (null textarea) by making editor init defensive. This prevents an uncaught exception ("Cannot read properties of null (reading 'value')") that could halt page initialization.
+- Fixed the search panel to ignore empty queries and added a guard so it does nothing if the expected UI elements are not present. An E2E test now stubs Nominatim and verifies searching for "New York" moves the camera.
+- Physics files were moved to `frontend/static/js/physics/` to avoid 404s and `physics_bridge` attaches physics body to the Cesium entity for better integration.
+
+---
+
+## 🖥️ Serving the demo templates locally ⚙️
+
+To view the `templates/` demo pages (for example `digital_twin.modular.html`) in your browser locally, use one of the following helpers from the repository root:
+
+- Windows (cmd): `scripts\serve_templates.bat`
+- PowerShell: `./scripts/serve_templates.ps1`
+- Python (cross-platform): `python scripts/serve_templates.py`
+
+These start a simple static server on port **5500** and will open the demo URL automatically: `http://127.0.0.1:5500/templates/digital_twin.modular.html`.
+
+> Note: Typing or pasting a raw URL directly into the terminal will cause a "command not found" (exit code 127) error — paste the URL into your browser address bar or use the helper scripts above to open it.
 
 ---
 
@@ -145,6 +185,20 @@ git push -u origin feature/docs-tests-pr
 ---
 
 ## If you'd like, I can push this branch and open the PR for you (I can attempt to use the GitHub CLI if available).
+
+## Asset collection helper
+
+A small utility script helps download 3D model files (OBJ/GLTF/GLB) into the `frontend/static/assets/models/` folder for local hosting and testing:
+
+```bash
+# download single files
+python scripts/download_models.py --out frontend/static/assets/models/ https://example.com/airplane.obj https://example.com/car.glb
+
+# or provide a file with URLs (one per line)
+python scripts/download_models.py --file urls.txt
+```
+
+This makes it simple to gather airplane, car, radio, and sensor models to be used in the Digital Twin.
 
 ## 🛠️ Integrated Tools & Demos
 

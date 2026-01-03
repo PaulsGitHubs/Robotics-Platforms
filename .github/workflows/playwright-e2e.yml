@@ -1,0 +1,52 @@
+name: Playwright E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      backend:
+        image: python:3.11
+        ports: ['8000:8000']
+        options: >-
+          --health-cmd "python -c \"import time, requests; time.sleep(0.2)\""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Start backend
+        run: |
+          nohup uvicorn backend.src.server:app --host 0.0.0.0 --port 8000 &
+          sleep 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: npm run test:e2e -- --reporter=list
+        env:
+          CI: true
+          # Optional: pass cesium token if set in repo secrets
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
