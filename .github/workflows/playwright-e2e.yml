@@ -1,9 +1,8 @@
 name: Playwright E2E
 
+# Disabled automatic runs to avoid CI failures on PRs. Run manually via the Actions tab when needed.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   e2e:
