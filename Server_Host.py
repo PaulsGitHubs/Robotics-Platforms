@@ -43,9 +43,40 @@ def index():
 @app.route("/ai_query", methods=["POST"])
 def ai_query():
     payload = request.get_json(silent=True) or {}
-    query = payload.get("query", "")
+    # Accept either 'message' or legacy 'query'
+    query = payload.get("message") or payload.get("query") or ""
     if not query:
         return jsonify({"error": "No query provided"}), 400
+
+    # Simple geocoding for commands like 'drive to Lagos Island'
+    try:
+        import requests
+        if "drive to" in query.lower():
+            loc = query.lower().split("drive to", 1)[1].strip()
+            if loc:
+                try:
+                    r = requests.get(
+                        "https://nominatim.openstreetmap.org/search",
+                        params={"format": "json", "q": loc, "limit": 1},
+                        headers={"User-Agent": "DigitalTwin/1.0"},
+                        timeout=5,
+                    )
+                    data = r.json()
+                    if data:
+                        lat = float(data[0]["lat"])
+                        lon = float(data[0]["lon"])
+                        return jsonify({
+                            "message": f"Driving to {data[0].get('display_name', loc)}",
+                            "success": True,
+                            "action": {"type": "drive", "lat": lat, "lon": lon},
+                        })
+                    else:
+                        return jsonify({"message": f"Location not found: {loc}", "success": False}), 200
+                except Exception as e:
+                    return jsonify({"error": str(e), "success": False}), 500
+    except Exception:
+        # requests may not be available; continue to AI fallback
+        pass
 
     if not AI_ENGINE_AVAILABLE:
         # Safe fallback: echo back the prompt for now
@@ -58,6 +89,32 @@ def ai_query():
         return jsonify({"message": result, "success": True})
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
+
+
+# Add /ai/object endpoint (mirrors FastAPI behavior expected by the UI)
+@app.route("/ai/object", methods=["POST"])
+def ai_object():
+    payload = request.get_json(silent=True) or {}
+    obj = payload.get("object") or {}
+    model = str(obj.get("model", "")).lower()
+    otype = str(obj.get("type", "")).lower()
+
+    classified = otype or "unknown"
+    suggestions = []
+
+    if "car" in model or "sedan" in model or "truck" in model:
+        classified = "car"
+        suggestions = ["drive", "brake", "slow_at_checkpoints", "report_status"]
+    elif "aircraft" in model or "plane" in model or "airplane" in model:
+        classified = "aircraft"
+        suggestions = ["arm_engines", "takeoff", "land", "report_status"]
+    elif "satellite" in model or "sat" in model:
+        classified = "satellite"
+        suggestions = ["monitor_orbit", "track_signal", "report_status"]
+    else:
+        suggestions = ["inspect", "report_status"]
+
+    return jsonify({"classification": classified, "suggestions": suggestions, "ai": None}), 200
 
 # Endpoint to list sensor JS files available (for auto-loader)
 @app.route("/sensor_list", methods=["GET"])
