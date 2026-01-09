@@ -1,10 +1,10 @@
-import os
+# 3d_objects.py
 from pathlib import Path
 from uuid import uuid4
 
 from flask import (
-    Flask, request, redirect, url_for,
-    send_from_directory, abort, render_template_string, make_response
+    Blueprint, request, redirect, url_for,
+    send_from_directory, abort, render_template_string, make_response, current_app
 )
 from werkzeug.utils import secure_filename
 
@@ -12,8 +12,8 @@ from werkzeug.utils import secure_filename
 # Configuration
 # --------------------
 BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_FOLDER = BASE_DIR / "models"
-UPLOAD_FOLDER.mkdir(exist_ok=True)
+DEFAULT_UPLOAD_FOLDER = BASE_DIR / "models"
+DEFAULT_UPLOAD_FOLDER.mkdir(exist_ok=True)
 
 # More 3D / robotics-relevant formats
 ALLOWED_EXTENSIONS = {
@@ -27,8 +27,19 @@ ALLOWED_EXTENSIONS = {
     ".sdf",   # Simulation description
 }
 
-app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
+objects_bp = Blueprint("objects", __name__)
+
+
+def _upload_folder() -> Path:
+    """
+    Resolve upload folder from app config. Falls back to DEFAULT_UPLOAD_FOLDER.
+    """
+    folder = current_app.config.get("UPLOAD_FOLDER")
+    if folder:
+        p = Path(folder)
+        p.mkdir(exist_ok=True)
+        return p
+    return DEFAULT_UPLOAD_FOLDER
 
 
 def allowed_file(filename: str) -> bool:
@@ -69,7 +80,7 @@ def display_name_from_stored(stored_name: str) -> str:
 # --------------------
 # File Upload Endpoint
 # --------------------
-@app.route("/upload-model", methods=["POST"])
+@objects_bp.route("/upload-model", methods=["POST"])
 def upload_model():
     """
     Accepts a 3D model file and stores it in UPLOAD_FOLDER with a unique name.
@@ -89,30 +100,32 @@ def upload_model():
             + ", ".join(sorted(ALLOWED_EXTENSIONS))
         ), 400
 
-    # Create unique stored filename based on original name + GUID
+    upload_folder = _upload_folder()
+
     stored_filename = make_unique_filename(file.filename)
-    save_path = UPLOAD_FOLDER / stored_filename
+    save_path = upload_folder / stored_filename
     file.save(save_path)
 
-    # Redirect to models index or return JSON if you prefer
-    return redirect(url_for("list_models"))
+    return redirect(url_for("objects.list_models"))
 
 
 # --------------------
 # Serve a single model file (no directory paths)
 # --------------------
-@app.route("/models/<filename>")
+@objects_bp.route("/models/<filename>")
 def serve_model_file(filename):
     """
     Serves a file from UPLOAD_FOLDER by filename only.
     No directories/paths are allowed or exposed.
     """
+    upload_folder = _upload_folder()
+
     safe_name = secure_filename(filename)
-    file_path = (UPLOAD_FOLDER / safe_name).resolve()
+    file_path = (upload_folder / safe_name).resolve()
 
     # Ensure the file is exactly inside UPLOAD_FOLDER
     try:
-        file_path.relative_to(UPLOAD_FOLDER)
+        file_path.relative_to(upload_folder)
     except ValueError:
         abort(404)
 
@@ -120,7 +133,7 @@ def serve_model_file(filename):
         abort(404)
 
     return send_from_directory(
-        directory=str(UPLOAD_FOLDER),
+        directory=str(upload_folder),
         path=safe_name,
         as_attachment=False
     )
@@ -129,7 +142,7 @@ def serve_model_file(filename):
 # --------------------
 # Directory HTML Index: /models
 # --------------------
-@app.route("/models")
+@objects_bp.route("/models")
 def list_models():
     """
     Returns an HTML page listing model files in UPLOAD_FOLDER.
@@ -137,16 +150,16 @@ def list_models():
     - No directory structure or real paths are exposed.
     - Filenames on disk have GUIDs; users see original-like names.
     """
+    upload_folder = _upload_folder()
 
     file_entries = []
-    for p in UPLOAD_FOLDER.iterdir():
+    for p in upload_folder.iterdir():
         if p.is_file() and allowed_file(p.name):
             file_entries.append({
                 "stored_name": p.name,
                 "display_name": display_name_from_stored(p.name),
             })
 
-    # Sort by display name
     file_entries.sort(key=lambda e: e["display_name"].lower())
 
     template = """
@@ -156,35 +169,14 @@ def list_models():
       <meta charset="utf-8">
       <title>Models Directory</title>
       <style>
-        body {
-          font-family: sans-serif;
-          margin: 20px;
-        }
-        h1 {
-          margin-bottom: 0.5em;
-        }
-        ul {
-          list-style: none;
-          padding-left: 0;
-        }
-        li {
-          margin: 4px 0;
-        }
-        a {
-          text-decoration: none;
-          color: #0066cc;
-        }
-        a:hover {
-          text-decoration: underline;
-        }
-        .empty {
-          color: #777;
-        }
-        .filename-small {
-          font-size: 11px;
-          color: #999;
-          margin-left: 6px;
-        }
+        body { font-family: sans-serif; margin: 20px; }
+        h1 { margin-bottom: 0.5em; }
+        ul { list-style: none; padding-left: 0; }
+        li { margin: 4px 0; }
+        a { text-decoration: none; color: #0066cc; }
+        a:hover { text-decoration: underline; }
+        .empty { color: #777; }
+        .filename-small { font-size: 11px; color: #999; margin-left: 6px; }
       </style>
     </head>
     <body>
@@ -193,7 +185,7 @@ def list_models():
         <ul>
           {% for entry in files %}
             <li>
-              <a href="{{ url_for('serve_model_file', filename=entry.stored_name) }}" target="_blank">
+              <a href="{{ url_for('objects.serve_model_file', filename=entry.stored_name) }}" target="_blank">
                 {{ entry.display_name }}
               </a>
               <span class="filename-small">(id: {{ entry.stored_name }})</span>
@@ -208,27 +200,6 @@ def list_models():
     """
 
     html = render_template_string(template, files=file_entries)
-    # Explicitly set Content-Type to text/html
     resp = make_response(html, 200)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     return resp
-
-
-# --------------------
-# Serve index.html from current directory on /
-# --------------------
-@app.route("/", methods=["GET"])
-def index():
-    """
-    Serve index.html from the same directory as this app file.
-    """
-    index_path = BASE_DIR / "index.html"
-    if not index_path.exists():
-        return "index.html not found in current directory", 404
-
-    return send_from_directory(directory=str(BASE_DIR), path="index.html")
-
-
-if __name__ == "__main__":
-    # For development only. Use a proper WSGI server (gunicorn/uwsgi) in production.
-    app.run(host="0.0.0.0", port=8001, debug=True)

@@ -1245,56 +1245,57 @@ initScene();</textarea
       </div>
 
       <!-- Upload Modal -->
-      <div class="upload-modal" id="uploadModal">
-        <div class="upload-content">
-          <h3 class="upload-header">Upload 3D Model</h3>
-          <form class="upload-form" id="uploadForm">
-            <div class="form-group">
-              <label class="form-label">Model Name</label>
-              <input type="text" class="form-input" id="modelName" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Model File (GLTF/GLB)</label>
-              <input
-                type="file"
-                class="form-input"
-                id="modelFile"
-                accept=".gltf,.glb"
-                style="display: none"
-                required
-              />
-              <button type="button" class="btn btn-sm" id="selectModelFile" style="margin-top: 5px">
-                <i class="fas fa-folder-open"></i> Select Model File
-              </button>
-              <span id="selectedFileName" style="margin-left: 10px; font-size: 12px"
-                >No file selected</span
-              >
-            </div>
-            <div class="form-group">
-              <label class="form-label">Initial Position (Longitude)</label>
-              <input
-                type="number"
-                class="form-input"
-                id="modelLon"
-                value="-74.0060"
-                step="0.0001"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Initial Position (Latitude)</label>
-              <input type="number" class="form-input" id="modelLat" value="40.7128" step="0.0001" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Initial Height (meters)</label>
-              <input type="number" class="form-input" id="modelHeight" value="100" />
-            </div>
-            <div class="upload-actions">
-              <button type="button" class="btn btn-outline" id="cancelUpload">Cancel</button>
-              <button type="submit" class="btn" id="confirmUpload">Upload</button>
-            </div>
-          </form>
-        </div>
+    <div class="upload-modal" id="uploadModal">
+      <div class="upload-content">
+        <h3 class="upload-header">Upload 3D Model</h3>
+        <form class="upload-form" id="uploadForm">
+          <div class="form-group">
+            <label class="form-label">Model Name</label>
+            <input type="text" class="form-input" id="modelName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model File (GLTF/GLB)</label>
+            <input type="file" class="form-input" id="modelFile" accept=".gltf,.glb" style="display: none;" required>
+            <button type="button" class="btn btn-sm" id="selectModelFile" style="margin-top: 5px;">
+              <i class="fas fa-folder-open"></i> Select Model File
+            </button>
+            <span id="selectedFileName" style="margin-left: 10px; font-size: 12px;">No file selected</span>
+          </div>
+
+          <!-- NEW: persist on server checkbox -->
+          <div class="form-group">
+            <label class="form-label" style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="persistOnServer" checked>
+              Also upload and persist on server
+            </label>
+            <span style="font-size: 11px; color: var(--text-secondary);">
+              The model will still load locally for this browser session. If checked, a copy is also stored on the backend under <code>/models</code>.
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Initial Position (Longitude)</label>
+            <input type="number" class="form-input" id="modelLon" value="-74.0060" step="0.0001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Position (Latitude)</label>
+            <input type="number" class="form-input" id="modelLat" value="40.7128" step="0.0001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Height (meters)</label>
+            <input type="number" class="form-input" id="modelHeight" value="100">
+          </div>
+          <div class="upload-actions">
+            <button type="button" class="btn btn-outline" id="cancelUpload">
+              Cancel
+            </button>
+            <button type="submit" class="btn" id="confirmUpload">
+              Upload
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
 
       <!-- Tooltip -->
       <div id="tooltip" class="tooltip"></div>
@@ -1740,23 +1741,27 @@ configureModel();`);
         document.getElementById('uploadForm').addEventListener('submit', handleModelUpload);
       }
 
+      // UPDATED: keep local behavior and add optional server persistence
       async function handleModelUpload(e) {
         e.preventDefault();
-
+        
         const modelName = document.getElementById('modelName').value;
         const lon = parseFloat(document.getElementById('modelLon').value);
         const lat = parseFloat(document.getElementById('modelLat').value);
         const height = parseFloat(document.getElementById('modelHeight').value);
         const modelFile = document.getElementById('modelFile').files[0];
-
+        const persistOnServerEl = document.getElementById('persistOnServer');
+        const persistOnServer = persistOnServerEl ? persistOnServerEl.checked : false;
+        
         if (!modelFile) {
           outputToConsole('Error: No model file selected', 'error');
           return;
         }
-
+        
         try {
-          outputToConsole(`Uploading model: ${modelName}...`, 'info');
-
+          outputToConsole(`Uploading model into scene: ${modelName}...`, 'info');
+          
+          // 1) CURRENT BEHAVIOR: local Blob URL + Cesium entity
           const modelUrl = URL.createObjectURL(modelFile);
           const entity = viewer.entities.add({
             name: modelName,
@@ -1764,23 +1769,56 @@ configureModel();`);
             model: {
               uri: modelUrl,
               minimumPixelSize: 128,
-              maximumScale: 20000,
+              maximumScale: 20000
             },
-            draggable: true,
+            draggable: true
           });
-
+          
           makeEntityDraggable(entity);
           state.entities.push(entity);
           state.uploadedModels[modelName] = { url: modelUrl, entity };
-
+          
           updateEntitiesList();
           addModelToFileList(modelName, modelUrl);
+          
+          outputToConsole(
+            `Added model to scene: ${modelName} at (${lon}, ${lat}, ${height})`,
+            'success'
+          );
 
-          outputToConsole(`Added model: ${modelName} at (${lon}, ${lat}, ${height})`, 'success');
+          // 2) NEW BEHAVIOR: optional persistence to Flask backend
+          if (persistOnServer) {
+            outputToConsole('Persisting model on server (/upload-model)...', 'info');
+
+            try {
+              const formData = new FormData();
+              // 'model' matches the expected field name in the Flask endpoint
+              formData.append('model', modelFile, modelFile.name);
+
+              const resp = await fetch('/upload-model', {
+                method: 'POST',
+                body: formData
+              });
+
+              if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(text || `HTTP ${resp.status}`);
+              }
+
+              outputToConsole('Model successfully saved on server. Browse at /models.', 'success');
+            } catch (serverErr) {
+              outputToConsole(
+                `Could not save model to server: ${serverErr.message}`,
+                'warning'
+              );
+            }
+          }
+          
+          // 3) Clean up UI and fly to model
           document.getElementById('uploadModal').style.display = 'none';
           document.getElementById('uploadForm').reset();
           document.getElementById('selectedFileName').textContent = 'No file selected';
-
+          
           viewer.flyTo(entity);
         } catch (error) {
           outputToConsole(`Error uploading model: ${error.message}`, 'error');

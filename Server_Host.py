@@ -12,6 +12,8 @@ Flask server for the Digital Twin IDE.
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory, abort
 from dotenv import load_dotenv
+import routes.objects as objects_router
+
 
 load_dotenv()
 
@@ -26,6 +28,7 @@ except Exception as e:
     AIEngine = None
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.register_blueprint(objects_router.objects_bp)  # Register the 3d objects blueprint
 
 # Configuration from environment
 CESIUM_ION_TOKEN = os.getenv("CESIUM_ION_TOKEN", "")
@@ -128,13 +131,7 @@ def sensor_list():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Serve 3d_objects files
-@app.route("/3d_objects/<path:filename>")
-def serve_3d_objects(filename):
-    base = os.path.join(os.getcwd(), "3d_objects")
-    if not os.path.exists(os.path.join(base, filename)):
-        abort(404)
-    return send_from_directory(base, filename)
+
 
 # Optional: Serve physics or other folders outside static
 @app.route("/physics/<path:filename>")
