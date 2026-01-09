@@ -22,6 +22,13 @@ Documentation, README, system organization, open-source preparation
 Fixes, cleanup, debugging & modernization of codebase
 Feature expansions and architecture consistency
 
+3. Tchinda Jordan (Developer & Repo Maintainer)
+Implemented 3d Objects Router
+Refactored Repo
+Defined Repo's Main README
+Several Bug Fixes
+
+
 🌍 Community Contributors
 Name	Contribution
 (Your name here)	Open an issue or pull request to be added
