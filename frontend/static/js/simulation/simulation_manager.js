@@ -18,26 +18,79 @@ export class SimulationManager {
     const modelUri = '/static/assets/models/cars/sedan.glb';
     let car = null;
 
-    // Try HEAD to check if model exists / is non-empty; otherwise fallback to a point
+    // Ask the assets registry whether the car model exists; avoid direct GLB requests
+    let carUseModel = false;
     try {
-      const head = await fetch(modelUri, { method: 'HEAD' });
-      const contentLen = head.headers.get('content-length');
-      if (head.ok && contentLen && parseInt(contentLen, 10) > 50) {
-        car = this.viewer.entities.add({
-          id: vid,
-          name: vid,
-          position: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128),
-          model: { uri: modelUri },
-        });
-      } else {
-        car = this.viewer.entities.add({
-          id: vid,
-          name: vid,
-          position: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128),
-          point: { pixelSize: 10, color: Cesium.Color.ORANGE },
-        });
+      const res = await fetch('/api/assets/registry');
+      if (res.ok) {
+        const j = await res.json();
+        const m = j?.models?.car;
+        if (m && m.exists === true) carUseModel = true;
       }
     } catch (e) {
+      // ignore and fallback to point
+    }
+
+    if (carUseModel) {
+      // Validate GLB header to avoid letting Cesium parse corrupted GLBs that
+      // would otherwise emit JSON parse errors. If validation fails, fall back
+      // to a simple box primitive.
+      try {
+        const { validateGlbHeader } = await import('/static/js/asset_utils.js');
+        const ok = await validateGlbHeader(modelUri);
+        if (ok) {
+          car = this.viewer.entities.add({
+            id: vid,
+            name: vid,
+            position: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128),
+            model: { uri: modelUri },
+          });
+          // wait for model to be ready and fallback if it fails to load
+          if (car.model && car.model.readyPromise && typeof car.model.readyPromise.then === 'function') {
+            try {
+              await car.model.readyPromise;
+            } catch (e) {
+              // single info-level message and graceful fallback to a box
+              if (!window.__vehicleModelFallbackLogged) {
+                console.info('[VehicleModel] sedan.glb failed to load or is corrupted → using box fallback');
+                window.__vehicleModelFallbackLogged = true;
+              }
+              try { this.viewer.entities.remove(car); } catch (err) {}
+              car = this.viewer.entities.add({
+                id: vid,
+                name: vid,
+                position: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128),
+                box: { dimensions: new Cesium.Cartesian3(4, 2, 1), material: Cesium.Color.ORANGE }
+              });
+            }
+          }
+        } else {
+          // Invalid GLB header or content-length mismatch: instantiate box instead
+          if (!window.__vehicleModelFallbackLogged) {
+            console.info('[VehicleModel] sedan.glb invalid or corrupted → using box fallback');
+            window.__vehicleModelFallbackLogged = true;
+          }
+          car = this.viewer.entities.add({
+            id: vid,
+            name: vid,
+            position: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128),
+            box: { dimensions: new Cesium.Cartesian3(4, 2, 1), material: Cesium.Color.ORANGE }
+          });
+        }
+      } catch (e) {
+        // In case validation module fails, still ensure a working fallback
+        if (!window.__vehicleModelFallbackLogged) {
+          console.info('[VehicleModel] Failed to validate sedan.glb → using box fallback');
+          window.__vehicleModelFallbackLogged = true;
+        }
+        car = this.viewer.entities.add({
+          id: vid,
+          name: vid,
+          position: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128),
+          box: { dimensions: new Cesium.Cartesian3(4, 2, 1), material: Cesium.Color.ORANGE }
+        });
+      }
+    } else {
       car = this.viewer.entities.add({
         id: vid,
         name: vid,
@@ -60,7 +113,15 @@ export class SimulationManager {
 
     // start satellite manager
     if (typeof this.satellites?.start === 'function') {
-      this.satellites.start();
+      try {
+        const satCount = await this.satellites.start();
+        console.log('[SimulationManager] SatelliteManager started with', satCount, 'satellite(s)');
+      } catch (e) {
+        console.warn(
+          '[SimulationManager] SatelliteManager failed to start, continuing without satellites',
+          e
+        );
+      }
     }
 
     // create a simple checkpoint a short distance ahead of the car (for braking test)
@@ -75,6 +136,28 @@ export class SimulationManager {
         this.vehicle.accelerate(0.2);
       }
     }, 200);
+
+    // Optional: connect to physics server for multiplayer snapshots
+    try {
+      const { PhysicsNetwork } = await import('/static/js/network/PhysicsNetwork.js');
+      const router = await import('/static/js/physics-runtime/PhysicsRouter.js');
+      this._net = new PhysicsNetwork();
+      this._net.connect();
+      try {
+        window.__physicsNetwork = this._net;
+      } catch (e) {}
+      this._net.onSnapshot = (snapshot) => {
+        try {
+          router.applySnapshot(snapshot);
+        } catch (e) {}
+      };
+      console.log('[SimulationManager] PhysicsNetwork client started');
+    } catch (e) {
+      console.warn(
+        '[SimulationManager] PhysicsNetwork failed to start (continuing single-player)',
+        e
+      );
+    }
 
     // store bound handler so it can be removed on stop()
     this._preUpdateHandler = () => this.update();
@@ -101,6 +184,16 @@ export class SimulationManager {
 
     if (typeof this.satellites?.stop === 'function') {
       this.satellites.stop();
+    }
+
+    if (this._net) {
+      try {
+        this._net.close();
+      } catch (e) {}
+      try {
+        window.__physicsNetwork = null;
+      } catch (e) {}
+      this._net = null;
     }
 
     // optionally clear entities

@@ -10,6 +10,10 @@ def test_health():
     data = r.json()
     assert data.get("status") == "ok"
     assert "service" in data
+    # The health route exposes whether a WebSocket backend is reachable via
+    # the optional 'ws' boolean field. Tests should accept either True/False.
+    assert "ws" in data
+    assert isinstance(data["ws"], bool)
 
 
 def test_public_data_returns_list():

@@ -1,0 +1,124 @@
+:root {
+  --bg: #0b0f12;
+  --panel: #151a20;
+  --accent: #00d4ff;
+  --text: #eaeaea;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family: Inter, system-ui, Arial;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* CESIUM VIEWER */
+#viewer {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* TOP UI BAR */
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(20, 25, 30, 0.9);
+  border-radius: 10px;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+#ui input,
+#ui select,
+#ui button {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+}
+
+#ui input {
+  width: 160px;
+}
+
+#ui button {
+  background: #2a2f36;
+  color: #fff;
+  cursor: pointer;
+}
+
+#ui button:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+/* AI FLOATING PANEL */
+#ai-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 240px;
+  background: rgba(20, 25, 30, 0.95);
+  border-radius: 12px;
+  padding: 10px;
+  display: none;
+  z-index: 20;
+  overflow: hidden;
+}
+
+#ai-panel.open {
+  display: block;
+}
+
+.ai-header {
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+
+#aiInput {
+  width: 100%;
+  height: 60px;
+  resize: none;
+  font-size: 12px;
+  padding: 6px;
+  border-radius: 6px;
+  border: none;
+  background: #0f1419;
+  color: white;
+}
+
+#aiSend {
+  margin-top: 6px;
+  width: 100%;
+  padding: 6px;
+  font-size: 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#aiResponse {
+  display: block;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: 12px;
+  margin-top: 6px;
+  color: #9cf;
+  white-space: pre-wrap;
+}
+

@@ -1,6 +1,5 @@
 /* global Cesium */
 /* eslint-env browser */
-import { physicsStep } from '/static/js/physics/physics.js';
 
 let viewer = null;
 let lastTime = performance.now();
@@ -56,18 +55,17 @@ export async function initScene() {
 
   viewer.scene.globe.depthTestAgainstTerrain = true;
 
-  startPhysicsLoop();
+  // Start deterministic physics loop attached to Cesium postRender
+  try {
+    const modeSelect = document.getElementById('physicsMode');
+    const mode = modeSelect ? (modeSelect.value === 'ammo' ? 'ammo' : 'light') : 'light';
+    const mod = await import('/static/js/physics-runtime/PhysicsLoop.js');
+    await mod.startPhysicsLoop(viewer, mode);
+  } catch (e) {
+    console.warn('Failed to start physics loop:', e);
+  }
 
   console.log('Cesium viewer created.');
-}
-
-function startPhysicsLoop() {
-  viewer.scene.preUpdate.addEventListener(() => {
-    const now = performance.now();
-    const delta = (now - lastTime) / 1000;
-    lastTime = now;
-    physicsStep(delta);
-  });
 }
 
 // Click-to-place helpers
@@ -78,27 +76,71 @@ export function enableClickToPlace(modelUri = '/static/assets/models/cars/sedan.
 
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
   const placeEntity = async (position) => {
-    // Try a cheap existence check for the model file (HEAD) and fall back to a point if not found
+    // Use registry + GLB validation to avoid HEAD requests that cause 404s or
+    // letting Cesium parse corrupted GLBs. If validation fails, use a point fallback.
     let ent;
     try {
-      const head = await fetch(modelUri, { method: 'HEAD' });
-      const contentLen = head.headers.get('content-length');
-      if (head.ok && contentLen && parseInt(contentLen, 10) > 50) {
-        ent = viewer.entities.add({ position, model: { uri: modelUri }, name: 'placed-object' });
+      let useModel = false;
+      try {
+        const res = await fetch('/api/assets/registry');
+        if (res.ok) {
+          const j = await res.json();
+          // map known URIs to registry keys (cars, aircraft, etc.)
+          if (modelUri.includes('/cars/')) {
+            const m = j?.models?.car;
+            if (m && m.exists === true) useModel = true;
+          } else if (modelUri.includes('/aircraft/')) {
+            const m = j?.models?.aircraft;
+            if (m && m.exists === true) useModel = true;
+          } else {
+            // Unknown model group: fall back to HEAD as a last resort
+            try {
+              const head = await fetch(modelUri, { method: 'HEAD' });
+              const contentLen = head.headers.get('content-length');
+              useModel = head.ok && contentLen && parseInt(contentLen, 10) > 50;
+            } catch (e) {
+              useModel = false;
+            }
+          }
+        }
+      } catch (e) {
+        // registry unavailable — fall back to HEAD
+        try {
+          const head = await fetch(modelUri, { method: 'HEAD' });
+          const contentLen = head.headers.get('content-length');
+          useModel = head.ok && contentLen && parseInt(contentLen, 10) > 50;
+        } catch (e) {
+          useModel = false;
+        }
+      }
+
+      if (useModel) {
+        try {
+          const { validateGlbHeader } = await import('/static/js/asset_utils.js');
+          const ok = await validateGlbHeader(modelUri);
+          if (ok) {
+            ent = viewer.entities.add({ position, model: { uri: modelUri }, name: 'placed-object' });
+            // if model fails to become ready, fall back silently to a point
+            if (ent.model && ent.model.readyPromise && typeof ent.model.readyPromise.then === 'function') {
+              try {
+                await ent.model.readyPromise;
+              } catch (e) {
+                try { viewer.entities.remove(ent); } catch (err) {}
+                ent = viewer.entities.add({ position, point: { pixelSize: 12, color: Cesium.Color.ORANGE }, name: 'placed-object' });
+              }
+            }
+          } else {
+            ent = viewer.entities.add({ position, point: { pixelSize: 12, color: Cesium.Color.ORANGE }, name: 'placed-object' });
+          }
+        } catch (e) {
+          ent = viewer.entities.add({ position, point: { pixelSize: 12, color: Cesium.Color.ORANGE }, name: 'placed-object' });
+        }
       } else {
-        ent = viewer.entities.add({
-          position,
-          point: { pixelSize: 12, color: Cesium.Color.ORANGE },
-          name: 'placed-object',
-        });
+        ent = viewer.entities.add({ position, point: { pixelSize: 12, color: Cesium.Color.ORANGE }, name: 'placed-object' });
       }
     } catch (e) {
-      // network/HEAD failed — fallback to a visible point
-      ent = viewer.entities.add({
-        position,
-        point: { pixelSize: 12, color: Cesium.Color.ORANGE },
-        name: 'placed-object',
-      });
+      // fallback to point in all failure cases
+      ent = viewer.entities.add({ position, point: { pixelSize: 12, color: Cesium.Color.ORANGE }, name: 'placed-object' });
     }
 
     // Attach a label directly to the entity so it follows it
@@ -276,4 +318,3 @@ export function setLighting(enabled) {
 export function clearAllEntities() {
   if (viewer) viewer.entities.removeAll();
 }
-
