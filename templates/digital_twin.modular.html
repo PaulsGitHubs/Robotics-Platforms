@@ -13,6 +13,9 @@
       rel="stylesheet"
     />
 
+    <!-- Ammo.js physics (optional mode) - loaded early so runtime can initialize it -->
+    <script src="https://cdn.jsdelivr.net/gh/kripken/ammo.js/builds/ammo.wasm.js"></script>
+
     <!-- ===================== -->
     <!-- Cesium Ion Token (FIX) -->
     <!-- ===================== -->
@@ -62,10 +65,37 @@
       <button id="spawnAircraft">Spawn Aircraft</button>
       <button id="loadBuildings">Load 3D Buildings</button>
 
+      <label for="physicsMode">Physics:</label>
+      <select id="physicsMode">
+        <option value="light">Light</option>
+        <option value="ammo">Ammo</option>
+      </select>
+
       <button id="toggleLabels">Labels</button>
       <button id="toggleSatellite">Satellite</button>
 
+      <button id="togglePhysicsDebug">Physics Debug</button>
       <button id="openAiPanel">AI</button>
+    </div>
+
+    <!-- ===================== -->
+    <!-- Debug / Physics Overlay -->
+    <!-- ===================== -->
+    <div
+      id="physicsDebug"
+      style="
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #9cf;
+        padding: 6px 8px;
+        border-radius: 4px;
+        font-family: monospace;
+        z-index: 20;
+      "
+    >
+      Mode: Light | Ticks: 0
     </div>
 
     <!-- ===================== -->
@@ -244,6 +274,55 @@
         const aiBtn = document.getElementById('openAiPanel');
         const aiPanel = document.getElementById('ai-panel');
         aiBtn.onclick = () => aiPanel.classList.toggle('open');
+
+        // Wire physics mode selector to runtime router (allows runtime switching)
+        try {
+          const modeSelect = document.getElementById('physicsMode');
+          if (modeSelect) {
+            modeSelect.addEventListener('change', async (ev) => {
+              try {
+                const mod = await import('/static/js/physics-runtime/PhysicsRouter.js');
+                mod.setMode(modeSelect.value === 'ammo' ? 'ammo' : 'light');
+              } catch (e) {
+                console.warn('Failed to set physics mode:', e);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Physics mode selector init failed', e);
+        }
+
+        // Toggle physics debug bounding boxes
+        try {
+          let _debugBoxes = [];
+          const dbgBtn = document.getElementById('togglePhysicsDebug');
+          if (dbgBtn) {
+            dbgBtn.addEventListener('click', async () => {
+              try {
+                const router = await import('/static/js/physics-runtime/PhysicsRouter.js');
+                const sync = await import('/static/js/physics-runtime/CesiumPhysicsSync.js');
+                const bodies = router.getRegisteredBodies();
+                if (_debugBoxes.length) {
+                  _debugBoxes.forEach((b) => {
+                    try {
+                      viewer.entities.remove(b);
+                    } catch (e) {}
+                  });
+                  _debugBoxes = [];
+                } else {
+                  for (const b of bodies) {
+                    const box = sync.showBoundingBox(viewer, b);
+                    if (box) _debugBoxes.push(box);
+                  }
+                }
+              } catch (e) {
+                console.warn('Physics debug toggle failed', e);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to init physics debug', e);
+        }
 
         document.getElementById('aiHelpBtn').onclick = () => {
           const h = document.getElementById('aiHelp');

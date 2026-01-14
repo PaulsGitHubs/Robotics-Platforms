@@ -4,61 +4,105 @@ export class SatelliteManager {
   constructor(viewer) {
     this.viewer = viewer;
     this.satellites = [];
+    this._onTickHandler = null;
   }
 
-  start() {
-    // Add a simple orbiting satellite as a demo, but check whether the model exists and is valid.
-    const uri = '/static/assets/models/satellites/satellites.glb';
-    const addEntityAsModel = (scale = 2) => {
-      const satellite = this.viewer.entities.add({
-        model: { uri, scale },
-      });
-      satellite._lon = 0;
-      satellite.position = new Cesium.CallbackProperty(() => {
-        return Cesium.Cartesian3.fromDegrees(satellite._lon, 0, 400000);
-      }, false);
-      this.satellites.push(satellite);
-    };
+  async start() {
+    console.info('[SatelliteManager] Initializing');
 
-    const addEntityAsPoint = () => {
-      const satellite = this.viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(0, 0, 400000),
-        point: { pixelSize: 6, color: Cesium.Color.CYAN },
-      });
-      satellite._lon = 0;
-      satellite.position = new Cesium.CallbackProperty(() => {
-        return Cesium.Cartesian3.fromDegrees(satellite._lon, 0, 400000);
-      }, false);
-      this.satellites.push(satellite);
-    };
+    const uri = '/static/assets/models/satellites/satellite.glb'; // canonical name
 
-    // Attempt a HEAD request to validate model file; fall back on failure
-    (async () => {
-      try {
-        const head = await fetch(uri, { method: 'HEAD' });
-        const contentLen = head.headers.get('content-length');
-        if (head.ok && contentLen && parseInt(contentLen, 10) > 200) {
-          addEntityAsModel();
-        } else {
-          console.warn('Satellite model missing or too small — using point fallback');
-          addEntityAsPoint();
-        }
-      } catch (e) {
-        console.warn('Satellite model check failed — using point fallback', e);
-        addEntityAsPoint();
+    // Determine whether the satellite model actually exists on the server by
+    // consulting the assets registry. This avoids issuing any HEAD/GET requests
+    // for the GLB itself when it is absent.
+    let modelAvailable = false;
+    try {
+      const res = await fetch('/api/assets/registry');
+      if (res.ok) {
+        const j = await res.json();
+        const s = j?.models?.satellite;
+        if (s && s.model === uri && s.exists === true) modelAvailable = true;
       }
-    })();
+    } catch (e) {
+      // If registry isn't available, fall back to point silently
+    }
 
-    // store handler reference to allow stopping later
-    this._onTickHandler = () => {
-      const time = Date.now() * 0.00005;
-      const lon = (time * 360) % 360;
-      this.satellites.forEach((s) => {
-        s._lon = lon;
+    const createOrbit = (sat) => {
+      sat._lon = 0;
+      sat.position = new Cesium.CallbackProperty(() => {
+        return Cesium.Cartesian3.fromDegrees(sat._lon, 0, 400000);
+      }, false);
+    };
+
+    const addPoint = () => {
+      const sat = this.viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(0, 0, 400000),
+        point: {
+          pixelSize: 6,
+          color: Cesium.Color.CYAN,
+        },
       });
+      createOrbit(sat);
+      this.satellites.push(sat);
+      return sat;
+    };
+
+    const addModel = async () => {
+      // Only attempt to create the model entity when we have confirmed it exists
+      const sat = this.viewer.entities.add({
+        model: {
+          uri,
+          scale: 2,
+        },
+      });
+
+      createOrbit(sat);
+      this.satellites.push(sat);
+
+      if (sat.model && sat.model.readyPromise && typeof sat.model.readyPromise.then === 'function') {
+        try {
+          await sat.model.readyPromise;
+          return sat;
+        } catch (err) {
+          // If model failed to instantiate despite being present, remove it and fall
+          // back to a non-blocking point. Use an info-level message for optional fallback.
+          try {
+            this.viewer.entities.remove(sat);
+          } catch (e) {}
+          console.info('[SatelliteManager] Satellite model failed to load → using point fallback');
+          return addPoint();
+        }
+      }
+
+      // If readyPromise isn't present, still treat as failure and fallback to point
+      try {
+        this.viewer.entities.remove(sat);
+      } catch (e) {}
+      console.info('[SatelliteManager] Satellite model unavailable → using point fallback');
+      return addPoint();
+    };
+
+    if (modelAvailable) {
+      // attempt once, but do not allow failures to bubble up
+      try {
+        await addModel();
+      } catch (e) {
+        // already handled by addModel fallback
+      }
+    } else {
+      // Known-missing: do not request the GLB file; instantiate the lightweight fallback
+      addPoint();
+    }
+
+    this._onTickHandler = () => {
+      const lon = ((Date.now() * 0.00005) * 360) % 360;
+      this.satellites.forEach((s) => (s._lon = lon));
     };
 
     this.viewer.clock.onTick.addEventListener(this._onTickHandler);
+
+    // Return how many satellites were added so callers can continue deterministically
+    return this.satellites.length;
   }
 
   stop() {
@@ -66,5 +110,12 @@ export class SatelliteManager {
       this.viewer.clock.onTick.removeEventListener(this._onTickHandler);
       this._onTickHandler = null;
     }
+
+    this.satellites.forEach((s) => {
+      try {
+        this.viewer.entities.remove(s);
+      } catch {}
+    });
+    this.satellites.length = 0;
   }
 }

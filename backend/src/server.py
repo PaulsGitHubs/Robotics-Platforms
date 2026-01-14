@@ -121,6 +121,7 @@ from .routes import (
     telecom_router,
     simulation_router,
     health_router,
+    assets_router,
 )
 
 app.include_router(geo_router)
@@ -128,6 +129,8 @@ app.include_router(public_data_router)
 app.include_router(telecom_router)
 app.include_router(simulation_router)
 app.include_router(health_router)
+app.include_router(assets_router)
+
 
 # --------------------------------------------------
 # AI Endpoints

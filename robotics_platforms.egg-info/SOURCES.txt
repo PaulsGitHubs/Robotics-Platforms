@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+backend/__init__.py
+backend/src/__init__.py
+backend/src/server.py
+robotics_platforms.egg-info/PKG-INFO
+robotics_platforms.egg-info/SOURCES.txt
+robotics_platforms.egg-info/dependency_links.txt
+robotics_platforms.egg-info/top_level.txt

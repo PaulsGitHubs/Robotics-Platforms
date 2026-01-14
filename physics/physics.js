@@ -9,21 +9,19 @@ export function registerBody(body) {
   bodies.push(body);
 }
 
+export function getBodies() {
+  return bodies;
+}
+
 export function physicsStep(dt) {
   bodies.forEach(body => {
-    // Gravity
-    if (body.useGravity) {
+    if (body.useGravity && !body.isStatic) {
       body.acceleration.z = Environment.gravity;
     }
 
-    //Buoyancy (water level at z = 0)
     applyBuoyancy(body, 0);
-
-    // Integrate motion
     integrate(body, dt);
   });
 
   handleCollisions(bodies);
 }
-
-

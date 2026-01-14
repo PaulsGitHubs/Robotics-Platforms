@@ -6,6 +6,7 @@ from .routes import (
     simulation_router,
     health_router,
 )
+from . import assets_routes
 
 __all__ = [
     "geo_router",
@@ -13,4 +14,8 @@ __all__ = [
     "telecom_router",
     "simulation_router",
     "health_router",
+    "assets_routes",
 ]
+
+# Provide a convenience binding for the router
+assets_router = assets_routes.router

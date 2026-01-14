@@ -63,6 +63,20 @@ The backend exposes a small public API for demo and integration purposes. These 
 
 ---
 
+## Physics Architecture ✅
+
+This project includes a deterministic physics architecture for the Digital Twin demo. Key points:
+
+- **Modes:** Two runtime physics modes are supported: **Light** (JavaScript lightweight integrator) and **Ammo** (compiled Bullet via Ammo.js). Switch at runtime with the UI selector or via `PhysicsRouter.setMode()`.
+- **Deterministic loop:** Physics runs on a fixed timestep (1/60 s). The loop is attached to Cesium's `postRender` callback and accumulates delta time — physics is stepped only on fixed ticks (no per-frame stepping).
+- **Physics Router:** All physics stepping and body registration are routed through `frontend/static/js/physics-runtime/PhysicsRouter.js`. Use its `registerBody` / `unregisterBody` APIs. The router delegates to Ammo or the lightweight integrator depending on the current mode.
+- **Cesium binding:** When creating a dynamic entity use `physics_bridge.enablePhysics(entity, options)` which sets up a `CallbackProperty` on the Cesium entity so visuals are driven by physics state, not the other way around. The physics runtime synchronizes transforms after each fixed tick.
+- **Entity rules:** Dynamic entities must have a `mass` > 0, `isStatic` flag disables updates. Static objects are not updated by the physics engine.
+- **Multiplayer & reconciliation:** A `PhysicsNetwork` client can send player inputs only and receive authoritative state snapshots (`id`, `position`, `velocity`). Clients perform prediction locally and converge to server snapshots via interpolation (no teleporting).
+- **Debugging & tools:** A small overlay shows current physics mode and tick activity; wireframe/bounding visualizations and tick logging are available in the runtime modules.
+
+---
+
 ## 🧪 Tests & Development
 
 - Added simple pytest tests for `/health` and `/api/public-data` (`backend/tests/test_endpoints.py`).
