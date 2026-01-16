@@ -1,0 +1,20 @@
+{
+  "actions": {
+    "BRAKE": {
+      "target": "vehicle",
+      "description": "Reduce speed immediately"
+    },
+    "STOP": {
+      "target": "vehicle",
+      "description": "Bring entity to full stop"
+    },
+    "RESUME": {
+      "target": "vehicle",
+      "description": "Resume movement after stop"
+    },
+    "MOVE_TO": {
+      "target": "entity",
+      "params": ["lat", "lng"]
+    }
+  }
+}
