@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,  // <--- Add this: it stops TS from trying to write files
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["static/js/**/*", "tests/**/*"],
+  "exclude": ["node_modules"]
+}
+

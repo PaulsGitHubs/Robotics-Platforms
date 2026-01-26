@@ -15,43 +15,266 @@ The platform provides a comprehensive suite of tools and services to transform t
 
 ---
 
-<img href="https://github.com/PaulsGitHubs/Cesium-projects-team/blob/main/demos/circuit1.gif" alt="Circuit"/>
+<img src="https://github.com/PaulsGitHubs/Robotics-Platforms/blob/main/demos/circuit1.gif" alt="Circuit"/>
+<br/>
+<img src="https://github.com/PaulsGitHubs/Robotics-Platforms/blob/main/demos/digitaltwin-simul.gif" alt="Simulation"/>
 
 ## ✨ Core Capabilities
 
 Robotics Platforms is built on five foundational capabilities that streamline the entire hardware engineering lifecycle:
 
 ### 1. AI-Powered Design
-* **Transform Hardware Development:** Utilizes structured LLMs and visual generative AI to automate complex design tasks.
-* **Hardware AI Solutions:** Provides AI-accelerated circuit design, automated schematic generation, **FPGA optimization**, power management analysis, and component compatibility checking.
+
+- **Transform Hardware Development:** Utilizes structured LLMs and visual generative AI to automate complex design tasks.
+- **Hardware AI Solutions:** Provides AI-accelerated circuit design, automated schematic generation, **FPGA optimization**, power management analysis, and component compatibility checking.
 
 ### 2. Digital Twins
-* **Real-Time Simulation:** Creates virtual replicas of physical systems for unparalleled performance optimization.
-* **Predictive Analytics:** Enables real-time synchronization, failure scenario simulation, performance testing, and **remote monitoring** before physical deployment.
+
+- **Real-Time Simulation:** Creates virtual replicas of physical systems for unparalleled performance optimization.
+- **Predictive Analytics:** Enables real-time synchronization, failure scenario simulation, performance testing, and **remote monitoring** before physical deployment.
 
 ### 3. Embedded Systems
-* **Firmware Engineering:** Offers expertise in developing cutting-edge, highly optimized firmware.
-* **Hardware Solutions:** Provides bespoke services for complex and specialized hardware requirements.
+
+- **Firmware Engineering:** Offers expertise in developing cutting-edge, highly optimized firmware.
+- **Hardware Solutions:** Provides bespoke services for complex and specialized hardware requirements.
 
 ### 4. AI Integration Services
-* **Workflow Enhancement:** Custom development of AI solutions tailored to specific business needs.
-* **Focus Areas:** Custom AI agent development, process automation, continuous optimization, and natural language interfaces.
+
+- **Workflow Enhancement:** Custom development of AI solutions tailored to specific business needs.
+- **Focus Areas:** Custom AI agent development, process automation, continuous optimization, and natural language interfaces.
 
 ### 5. Immersive Engine
-* **Web-Based 3D Environments:** A powerful 3D engine for creating interactive simulations, physics-based rendering, and realistic **training environments**.
-* **Features:** WebGL optimization, multiplayer support, and cross-platform compatibility.
+
+- **Web-Based 3D Environments:** A powerful 3D engine for creating interactive simulations, physics-based rendering, and realistic **training environments**.
+- **Features:** WebGL optimization, multiplayer support, and cross-platform compatibility.
 
 ---
+
+## 📡 Public API Endpoints
+
+The backend exposes a small public API for demo and integration purposes. These endpoints are intended to be safe for public access and resilient to upstream failures:
+
+- `GET /` — basic service info and links to `/docs` and `/health`.
+- `GET /health` — returns a small JSON health status (`{"status":"ok",...}`).
+- `GET /api/geo/area?lat=<lat>&lng=<lng>&radius=<r>` — returns normalized coordinates for a given location.
+- `GET /api/public-data/?lat=<lat>&lng=<lng>&radius=<r>` — returns a list of nearby OSM elements; if the upstream Overpass API is unavailable the endpoint returns an empty list (`[]`) and logs the error.
+- `GET /api/telecom/?lat=<lat>&lng=<lng>` — returns simulated telecom nodes for demonstration.
+- `GET /api/simulation/zone?lat=<lat>&lng=<lng>&radius=<r>` — runs a short simulation using public-data and telecom data and returns a `zone`, `score`, and `correlation` summary.
+
+---
+
+## 💾 Session Management (NEW!)
+
+The Digital Twin IDE now includes **persistent session management** using **IndexedDB** for storing workspace states. This feature enables users to:
+
+- **Save & restore** complete IDE sessions (camera position, entities, code, scene settings)
+- **Switch between projects** seamlessly with multiple saved sessions
+- **Auto-save** every 30 seconds to prevent data loss
+- **Search & filter** sessions by name
+- **Lightweight storage** - typical sessions are only 2-50 KB
+
+### Quick Start
+
+1. Open the Digital Twin IDE: `http://127.0.0.1:5000`
+2. Click the **Sessions** tab in the left sidebar
+3. Click **New** to create your first session
+4. Work on your project (add entities, write code, move camera)
+5. Click **Save** or wait for auto-save (30 seconds)
+6. Create multiple sessions and switch between them!
+
+### Why IndexedDB?
+
+We chose IndexedDB over localStorage for superior storage capacity (GBs vs 5-10MB), async non-blocking operations, native structured data support, and better performance with large datasets.
+
+### Documentation
+
+- **Quick Start Guide**: `docs/SESSION_QUICKSTART.md`
+- **Technical Documentation**: `docs/SESSION_MANAGEMENT.md`
+- **Implementation Summary**: `docs/IMPLEMENTATION_SUMMARY.md`
+
+### API Example
+
+```javascript
+import * as SM from '/static/js/session_manager.js';
+
+// Initialize
+await SM.initSessionManager();
+
+// Create session
+await SM.createNewSession('My Project');
+
+// Save current work
+await SM.saveCurrentSession();
+
+// List all sessions
+const sessions = await SM.getAllSessions();
+
+// Load a session
+await SM.loadSessionById(sessions[0].id);
+```
+
+---
+
+## Physics Architecture ✅
+
+This project includes a deterministic physics architecture for the Digital Twin demo. Key points:
+
+- **Modes:** Two runtime physics modes are supported: **Light** (JavaScript lightweight integrator) and **Ammo** (compiled Bullet via Ammo.js). Switch at runtime with the UI selector or via `PhysicsRouter.setMode()`.
+- **Deterministic loop:** Physics runs on a fixed timestep (1/60 s). The loop is attached to Cesium's `postRender` callback and accumulates delta time — physics is stepped only on fixed ticks (no per-frame stepping).
+- **Physics Router:** All physics stepping and body registration are routed through `frontend/static/js/physics-runtime/PhysicsRouter.js`. Use its `registerBody` / `unregisterBody` APIs. The router delegates to Ammo or the lightweight integrator depending on the current mode.
+- **Cesium binding:** When creating a dynamic entity use `physics_bridge.enablePhysics(entity, options)` which sets up a `CallbackProperty` on the Cesium entity so visuals are driven by physics state, not the other way around. The physics runtime synchronizes transforms after each fixed tick.
+- **Entity rules:** Dynamic entities must have a `mass` > 0, `isStatic` flag disables updates. Static objects are not updated by the physics engine.
+- **Multiplayer & reconciliation:** A `PhysicsNetwork` client can send player inputs only and receive authoritative state snapshots (`id`, `position`, `velocity`). Clients perform prediction locally and converge to server snapshots via interpolation (no teleporting).
+- **Debugging & tools:** A small overlay shows current physics mode and tick activity; wireframe/bounding visualizations and tick logging are available in the runtime modules.
+
+---
+
+## 🧪 Tests & Development
+
+- Added simple pytest tests for `/health` and `/api/public-data` (`backend/tests/test_endpoints.py`).
+- To run backend tests: `pip install -r backend/requirements.txt` then `pytest backend/tests`.
+
+- Playwright E2E tests (frontend): the project includes Playwright tests to validate the Digital Twin UI. To run them locally:
+  - From repo root: `cd frontend`
+  - Install node deps: `npm install`
+  - Install Playwright browsers: `npx playwright install`
+  - Run tests: `npm run test:e2e` (or `npx playwright test`)
+  - Note: Tests stub the Nominatim search endpoint so they do not rely on external network services.
+
+Cesium Ion & 3D buildings
+
+- Place your Cesium Ion token in `.env` as `CESIUM_ION_TOKEN` (the Flask and FastAPI servers read this variable and pass it to the front-end templates).
+- When a token is available the UI will prefer Cesium World Imagery/World Terrain and can load Ion 3D tilesets (e.g. NYC buildings) via the **Load 3D Buildings** button.
+
+Search autocomplete
+
+- The search box uses Nominatim to fetch suggestions as you type and populates a datalist. To run the E2E test that validates this, Playwright stubs the Nominatim endpoint.
+
+Click-to-place objects
+
+- Use the **Place Car** button to toggle placement mode, then click on the globe to place a sample car model (`/static/assets/models/cars/sedan.glb`).
+
+Fixes and notes relevant to UI bugs discovered:
+
+- Fixed a CodeMirror initialization bug (null textarea) by making editor init defensive. This prevents an uncaught exception ("Cannot read properties of null (reading 'value')") that could halt page initialization.
+- Fixed the search panel to ignore empty queries and added a guard so it does nothing if the expected UI elements are not present. An E2E test now stubs Nominatim and verifies searching for "New York" moves the camera.
+- Physics files were moved to `frontend/static/js/physics/` to avoid 404s and `physics_bridge` attaches physics body to the Cesium entity for better integration.
+
+---
+
+## 🖥️ Serving the demo templates locally ⚙️
+
+To view the `templates/` demo pages (for example `digital_twin.modular.html`) in your browser locally, use one of the following helpers from the repository root:
+
+- Windows (cmd): `scripts\serve_templates.bat`
+- PowerShell: `./scripts/serve_templates.ps1`
+- Python (cross-platform): `python scripts/serve_templates.py`
+
+These start a simple static server on port **5500** and will open the demo URL automatically: `http://127.0.0.1:5500/templates/digital_twin.modular.html`.
+
+> Note: Typing or pasting a raw URL directly into the terminal will cause a "command not found" (exit code 127) error — paste the URL into your browser address bar or use the helper scripts above to open it.
+
+---
+
+## Changelog (unreleased)
+
+- Robustness: `fetch_osm_objects` now handles timeouts/network errors and returns an empty list on failure to keep public endpoints stable.
+- Quality: Added health and root endpoints and a small favicon handler to reduce noisy 404s.
+- Tests: Added basic pytest tests for key public endpoints.
+
+---
+
+## ✅ Testing & CI
+
+We include a small test suite covering key public endpoints and auth behavior. The project uses GitHub Actions to run tests and `pip-audit` on pull requests.
+
+Quick local steps:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+python -m pytest backend/tests
+```
+
+CI: see `.github/workflows/ci.yml` which installs deps, runs tests, and runs `pip-audit`.
+
+---
+
+## 🔗 Endpoints (short reference)
+
+- `GET /` — service info (links to `/docs` and `/health`).
+- `GET /health` — JSON health status for monitoring.
+- `GET /api/geo/area?lat=<lat>&lng=<lng>&radius=<r>` — normalized coordinates.
+- `GET /api/public-data/?lat=<lat>&lng=<lng>&radius=<r>` — returns OSM elements, returns `[]` if upstream fails.
+- `GET /api/telecom/?lat=<lat>&lng=<lng>` — simulated telecom nodes (requires `X-API-Key` header: user or admin role).
+- `GET /api/simulation/zone?lat=<lat>&lng=<lng>&radius=<r>` — simulation endpoint (requires `X-API-Key` header: admin role).
+
+---
+
+## 🔐 Security & Secrets
+
+- Do not commit secrets (e.g., API keys) to the repository. Use `.env` (ignored) for local development and provide a `.env.example` for reference.
+- Use GitHub Secrets or Vault for production secrets and the CI pipeline.
+- See `SECURITY.md` for more details and recommendations.
+
+---
+
+## 🧭 How to open a Pull Request
+
+1. Create a feature branch:
+
+```bash
+git fetch origin
+git checkout main
+git pull origin main
+git checkout -b feature/docs-tests-pr
+```
+
+2. Commit logically grouped changes and run tests locally.
+
+```bash
+git add <files>
+git commit -m "docs: add testing and endpoints; PR instructions"
+python -m pytest backend/tests
+```
+
+3. Push and open a PR:
+
+```bash
+git push -u origin feature/docs-tests-pr
+# Open a PR on GitHub from that branch into main, include:
+# - summary of changes
+# - test results
+# - security notes
+```
+
+---
+
+## If you'd like, I can push this branch and open the PR for you (I can attempt to use the GitHub CLI if available).
+
+## Asset collection helper
+
+A small utility script helps download 3D model files (OBJ/GLTF/GLB) into the `frontend/static/assets/models/` folder for local hosting and testing:
+
+```bash
+# download single files
+python scripts/download_models.py --out frontend/static/assets/models/ https://example.com/airplane.obj https://example.com/car.glb
+
+# or provide a file with URLs (one per line)
+python scripts/download_models.py --file urls.txt
+```
+
+This makes it simple to gather airplane, car, radio, and sensor models to be used in the Digital Twin.
 
 ## 🛠️ Integrated Tools & Demos
 
 The platform offers several interactive tools and demonstrations for hands-on experience:
 
-* **Circuit Simulator:** An integrated version of the **EveryCircuit** tool for schematic drawing and simulation.
-* **AI Chat Interface:** A direct interface to interact with the platform's AI assistant for technical questions and support.
-* **Digital Twin Demo:** Explore a live demonstration of real-time system monitoring and optimization using digital twin technology.
-* **Immersive Engine Demo:** Test the capabilities of the web-based 3D simulation and training environment.
-* **QLX Quantum Encryption:** A demonstration of **Military-Grade Post-Quantum Encryption/Decryption** technology for securing data and communication.
+- **Circuit Simulator:** An integrated version of the **EveryCircuit** tool for schematic drawing and simulation.
+- **AI Chat Interface:** A direct interface to interact with the platform's AI assistant for technical questions and support.
+- **Digital Twin Demo:** Explore a live demonstration of real-time system monitoring and optimization using digital twin technology.
+- **Immersive Engine Demo:** Test the capabilities of the web-based 3D simulation and training environment.
+- **QLX Quantum Encryption:** A demonstration of **Military-Grade Post-Quantum Encryption/Decryption** technology for securing data and communication.
 
 ---
 
@@ -59,13 +282,14 @@ The platform offers several interactive tools and demonstrations for hands-on ex
 
 The platform partners with leading technology providers to ensure high performance and security:
 
-| Category | Partner Examples |
-| :--- | :--- |
-| **Cloud/AI** | Google, AWS, NVIDIA, Microsoft, Intel, AMD |
-| **OS/Foundation** | Linux Foundation |
-| **Security** | QLX (Quantum-secure encryption) |
+| Category          | Partner Examples                           |
+| :---------------- | :----------------------------------------- |
+| **Cloud/AI**      | Google, AWS, NVIDIA, Microsoft, Intel, AMD |
+| **OS/Foundation** | Linux Foundation                           |
+| **Security**      | QLX (Quantum-secure encryption)            |
 
 ### Quantum Security
+
 All solutions are reinforced with state-of-the-art **QLX Post-Quantum Encryption/Decryption** to provide military-grade security against future threats, ensuring sensitive designs and communications remain confidential.
 
 ---
@@ -73,13 +297,17 @@ All solutions are reinforced with state-of-the-art **QLX Post-Quantum Encryption
 ## 🚀 Getting Started & Contact
 
 ### 1. Explore Demos
+
 Test the core features immediately by exploring the **Circuit Simulator**, **AI Chat Interface**, and the various **Digital Twin** and **Immersive Engine** demos available on the main website (<a href="https://www.roboticsplatforms.com/">https://www.roboticsplatforms.com/</a>).
 
 ### 2. Partner with Us
+
 For custom projects, enterprise solutions, or to initiate a partnership:
-* **Book a Meeting:** Directly schedule a consultation with the engineering team.
-* **Partnership Benefits:** Opportunities to become a preferred partner and access exclusive benefits (e.g., cloud credits).
+
+- **Book a Meeting:** Directly schedule a consultation with the engineering team.
+- **Partnership Benefits:** Opportunities to become a preferred partner and access exclusive benefits (e.g., cloud credits).
 
 ### 3. Resources
-* **Research & Blogs:** Access articles and insights into the latest in AI and hardware engineering.
-* **Whitepapers:** Download detailed documents on the platform's methodologies and technologies.
+
+- **Research & Blogs:** Access articles and insights into the latest in AI and hardware engineering.
+- **Whitepapers:** Download detailed documents on the platform's methodologies and technologies.

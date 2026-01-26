@@ -1,0 +1,27 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Node
+node_modules/
+
+# Cesium build/cache
+Build/
+CesiumBuild/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDEs / Editors
+.vscode/
+.idea/
+.pytest_cache/
+
+#Server generated directories
+models/
