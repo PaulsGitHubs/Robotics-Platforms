@@ -9,6 +9,9 @@ export class SensorTelemetryPanel {
         this.container = document.getElementById(containerId);
         this.sensorDataMap = new Map(); // sensorId -> latest data
         this.maxEntries = 100; // Max history entries per sensor
+        this.updateThrottle = 1000; // Throttle UI updates to 1000ms (1 update/sec)
+        this.lastRenderTime = 0;
+        this.pendingUpdate = false;
     }
 
     /**
@@ -17,6 +20,8 @@ export class SensorTelemetryPanel {
     updateSensorData(telemetry) {
         const { sensorId, sensorType, timestamp, data } = telemetry;
         
+        console.log('Telemetry received:', sensorType, sensorId.substring(0, 8), data);
+        
         // Store latest data
         this.sensorDataMap.set(sensorId, {
             type: sensorType,
@@ -24,8 +29,20 @@ export class SensorTelemetryPanel {
             data: data
         });
 
-        // Refresh display
-        this.render();
+        // Throttle the render calls
+        const now = Date.now();
+        if (now - this.lastRenderTime >= this.updateThrottle) {
+            this.lastRenderTime = now;
+            this.render();
+        } else if (!this.pendingUpdate) {
+            // Schedule a delayed update if we're being throttled
+            this.pendingUpdate = true;
+            setTimeout(() => {
+                this.pendingUpdate = false;
+                this.lastRenderTime = Date.now();
+                this.render();
+            }, this.updateThrottle - (now - this.lastRenderTime));
+        }
     }
 
     /**
@@ -45,6 +62,16 @@ export class SensorTelemetryPanel {
         }
 
         this.container.innerHTML = html;
+        
+        // Trigger animation restart by adding a class momentarily
+        requestAnimationFrame(() => {
+            const cards = this.container.querySelectorAll('.telemetry-card');
+            cards.forEach(card => {
+                card.style.animation = 'none';
+                card.offsetHeight; // Trigger reflow
+                card.style.animation = null;
+            });
+        });
     }
 
     /**

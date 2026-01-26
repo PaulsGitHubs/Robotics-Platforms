@@ -971,6 +971,238 @@
       .log-error {
         color: var(--danger);
       }
+      
+      /* Telemetry Panel Animations */
+      @keyframes dataFlow {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+      
+      @keyframes pulseGlow {
+        0%, 100% {
+          box-shadow: 0 0 5px rgba(0, 174, 239, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(0, 174, 239, 0.6);
+        }
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+      
+      @keyframes dataUpdate {
+        0% {
+          border-left-color: var(--primary);
+          box-shadow: 0 0 5px rgba(0, 174, 239, 0.3);
+        }
+        50% {
+          border-left-color: #00ff88;
+          box-shadow: -5px 0 30px rgba(0, 255, 136, 0.9), inset 5px 0 30px rgba(0, 255, 136, 0.3);
+        }
+        100% {
+          border-left-color: var(--primary);
+          box-shadow: 0 0 5px rgba(0, 174, 239, 0.3);
+        }
+      }
+      
+      @keyframes ripple {
+        0% {
+          transform: translate(-50%, -50%) scale(0.5);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(3);
+          opacity: 0;
+        }
+      }
+      
+      @keyframes flowingBorder {
+        0% {
+          border-left-width: 3px;
+          border-left-color: var(--primary);
+        }
+        25% {
+          border-left-width: 6px;
+          border-left-color: #00aaef;
+        }
+        50% {
+          border-left-width: 8px;
+          border-left-color: #00ff88;
+        }
+        75% {
+          border-left-width: 6px;
+          border-left-color: #00aaef;
+        }
+        100% {
+          border-left-width: 3px;
+          border-left-color: var(--primary);
+        }
+      }
+      
+      /* Telemetry Panel Styles */
+      .telemetry-card {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.03) 0%,
+          rgba(0, 174, 239, 0.15) 50%,
+          rgba(255, 255, 255, 0.03) 100%
+        );
+        background-size: 200% 100%;
+        border-radius: 4px;
+        padding: 10px 10px 10px 15px;
+        margin-bottom: 10px;
+        border-left: 3px solid var(--primary);
+        position: relative;
+        overflow: visible !important;
+        animation: 
+          dataFlow 2s ease-in-out infinite, 
+          dataUpdate 0.6s ease-out,
+          flowingBorder 2s ease-in-out infinite;
+        transition: all 0.3s ease;
+      }
+      
+      .telemetry-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(0, 255, 136, 0.6) 50%,
+          transparent 100%
+        );
+        pointer-events: none;
+        animation: shimmer 1.2s ease-in-out infinite;
+      }
+      
+      .telemetry-card::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 15px;
+        height: 15px;
+        background: radial-gradient(circle, rgba(0, 255, 136, 1) 0%, rgba(0, 255, 136, 0.4) 70%, transparent 100%);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        animation: ripple 1.5s ease-out infinite;
+        pointer-events: none;
+      }
+      
+      .telemetry-card:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        transform: translateX(3px);
+        box-shadow: 0 0 25px rgba(0, 174, 239, 0.4);
+      }
+      
+      .telemetry-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .sensor-type-badge {
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--primary);
+        text-transform: uppercase;
+        animation: fadeInUp 0.4s ease-out;
+        text-shadow: 0 0 10px rgba(0, 174, 239, 0.5);
+      }
+      
+      .sensor-id {
+        font-size: 10px;
+        color: var(--text-secondary);
+        font-family: monospace;
+        animation: fadeInUp 0.5s ease-out;
+      }
+      
+      .telemetry-data {
+        font-size: 12px;
+        line-height: 1.6;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.6s ease-out;
+      }
+      
+      .telemetry-data div {
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+      }
+      
+      .telemetry-data div:hover {
+        color: var(--primary);
+        transform: translateX(5px);
+      }
+      
+      .telemetry-data strong {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+      
+      .status-active {
+        color: var(--danger) !important;
+        font-weight: bold;
+        animation: pulseGlow 1s ease-in-out infinite;
+      }
+      
+      .status-clear {
+        color: var(--success) !important;
+      }
+      
+      .telemetry-timestamp {
+        font-size: 10px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        text-align: right;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.7s ease-out;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+      }
+      
+      .telemetry-timestamp:hover {
+        opacity: 1;
+      }
+      
+      .telemetry-empty {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 20px;
+        font-size: 12px;
+        animation: fadeInUp 0.5s ease-out;
+      }
     </style>
   </head>
   <body>
@@ -1059,7 +1291,7 @@
                   <i class="fas fa-chart-line" style="margin-right: 8px;"></i>
                   Live Telemetry
                 </h4>
-                <div id="telemetryPanel" style="max-height: 300px; overflow-y: auto;">
+                <div id="telemetryPanel" style="max-height: 300px; overflow-y: auto; overflow-x: visible; padding: 5px;">
                   <!-- Telemetry data will be rendered here -->
                   <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
                     No sensor data yet. Start simulation and add sensors to see telemetry.
@@ -1804,7 +2036,10 @@ initScene();</textarea
           if (state.sensorEngine) {
             state.sensorEngine.start();
             updateSimulationStatus(true);
-            outputToConsole('Sensor simulation started', 'info');
+            outputToConsole(`Sensor simulation started. Active sensors: ${state.sensorEngine.sensors.size}`, 'info');
+            console.log('Registered sensors:', Array.from(state.sensorEngine.sensors.keys()));
+          } else {
+            outputToConsole('Sensor engine not initialized', 'error');
           }
         });
         
@@ -2279,7 +2514,11 @@ configureModel();`);
           item.addEventListener('dragstart', (e) => {
             const sensorType = item.getAttribute('data-sensor-type');
             const sensorShape = item.getAttribute('data-sensor-shape');
-            const sensorParam = { ...sensorParameters[sensorType], shape: sensorShape };
+            const sensorParam = { 
+              ...sensorParameters[sensorType], 
+              shape: sensorShape,
+              sensorType: sensorType  // Add the actual sensor type name
+            };
             e.dataTransfer.setData('application/json', JSON.stringify(sensorParam));
             e.dataTransfer.effectAllowed = 'copy';
           });
@@ -2299,7 +2538,7 @@ configureModel();`);
 
             if (Cesium.defined(earthPosition)) {
               createSensorEntity(sensorParam, earthPosition);
-              outputToConsole(`Added ${sensorParam.type} sensor to scene`, 'success');
+              outputToConsole(`Added ${sensorParam.sensorType} sensor to scene`, 'success');
             }
           } catch (error) {
             outputToConsole(`Error adding sensor: ${error.message}`, 'error');
@@ -2311,67 +2550,86 @@ configureModel();`);
         // Create functional sensor instance based on type
         let sensor = null;
         
-        switch (sensorParam.type) {
+        // Convert Cartesian3 position to lon/lat/height
+        const cartographic = Cesium.Cartographic.fromCartesian(position);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude);
+        const lat = Cesium.Math.toDegrees(cartographic.latitude);
+        const height = cartographic.height;
+        
+        // Use sensorType property instead of type (which is the shape)
+        const sensorType = sensorParam.sensorType;
+        
+        switch (sensorType) {
           case 'LiDAR':
-            sensor = new LiDAR({
-              position: position,
+            sensor = new LiDAR(viewer, {
+              lon: lon,
+              lat: lat,
+              height: height,
               range: sensorParam.defaultRange,
               fov: sensorParam.defaultFov,
-              color: sensorParam.color,
-              viewer: viewer,
-              name: `${sensorParam.type} Sensor`,
+              color: Cesium.Color.fromCssColorString(sensorParam.color),
+              name: `${sensorType} Sensor`,
               description: sensorParam.description
             });
+            sensor.addToScene();
             break;
             
           case 'Ultrasonic':
-            sensor = new Ultrasonic({
-              position: position,
+            sensor = new Ultrasonic(viewer, {
+              lon: lon,
+              lat: lat,
+              height: height,
               range: sensorParam.defaultRange,
               fov: sensorParam.defaultFov,
-              color: sensorParam.color,
-              viewer: viewer,
-              name: `${sensorParam.type} Sensor`,
+              color: Cesium.Color.fromCssColorString(sensorParam.color),
+              name: `${sensorType} Sensor`,
               description: sensorParam.description
             });
+            sensor.addToScene();
             break;
             
           case 'Proximity':
-            sensor = new Proximity({
-              position: position,
+            sensor = new Proximity(viewer, {
+              lon: lon,
+              lat: lat,
+              height: height,
               range: sensorParam.defaultRange,
-              color: sensorParam.color,
-              viewer: viewer,
-              name: `${sensorParam.type} Sensor`,
+              color: Cesium.Color.fromCssColorString(sensorParam.color),
+              name: `${sensorType} Sensor`,
               description: sensorParam.description
             });
+            sensor.addToScene();
             break;
             
           case 'Temperature':
-            sensor = new Temperature({
-              position: position,
-              color: sensorParam.color,
-              viewer: viewer,
-              name: `${sensorParam.type} Sensor`,
+            sensor = new Temperature(viewer, {
+              lon: lon,
+              lat: lat,
+              height: height,
+              color: Cesium.Color.fromCssColorString(sensorParam.color),
+              name: `${sensorType} Sensor`,
               description: sensorParam.description
             });
+            sensor.addToScene();
             break;
             
           case 'Pressure':
-            sensor = new Pressure({
-              position: position,
-              color: sensorParam.color,
-              viewer: viewer,
-              name: `${sensorParam.type} Sensor`,
+            sensor = new Pressure(viewer, {
+              lon: lon,
+              lat: lat,
+              height: height,
+              color: Cesium.Color.fromCssColorString(sensorParam.color),
+              name: `${sensorType} Sensor`,
               description: sensorParam.description
             });
+            sensor.addToScene();
             break;
             
           default:
             // Fallback to static entity for unsupported sensor types (Radar, Humidity)
             const entityOptions = {
               position: position,
-              name: `${sensorParam.type} Sensor`,
+              name: `${sensorType} Sensor`,
               description: sensorParam.description,
               label: {
                 text: sensorParam.type,
@@ -2434,9 +2692,12 @@ configureModel();`);
           state.entities.push(entity);
           state.sensorInstances.set(entity.id, sensor);
           
-          // Register sensor with engine if it's running
+          // Register sensor with engine
           if (state.sensorEngine) {
             state.sensorEngine.registerSensor(sensor);
+            console.log(`Sensor registered with engine: ${sensor.id} (${sensor.type})`);
+          } else {
+            console.warn('Sensor engine not ready, sensor will not generate telemetry');
           }
           
           updateEntitiesList();
@@ -3130,3 +3391,4 @@ addPoint(${lon}, ${lat}, 100, Cesium.Color.RED);`;
     </script>
   </body>
 </html>
+

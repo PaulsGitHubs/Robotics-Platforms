@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## TODO / Upcoming Features
+- [ ] **Sensor Persistence**: Persist sensors in session save/load functionality
+- [ ] **Sensor Scene Properties**: Save sensor scene properties (position, type, config, range, FOV, color)
+- [ ] **DnD Sensor Handling**: Handle drag-and-drop created sensors in session manager
+- [ ] **Sensor Restoration**: Restore sensors on session load with full visualization and engine registration
+
 ## 2026-01-26 - Session Management Feature
 ### Added
 - **IndexedDB-based session persistence** for the Digital Twin IDE
