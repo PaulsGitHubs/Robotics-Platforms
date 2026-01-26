@@ -1038,6 +1038,36 @@
         <!-- Sensors Tab -->
         <div class="tab-content" id="sensors-tab">
           <div style="padding: 10px">
+            <!-- Simulation Controls -->
+            <div style="margin-bottom: 15px; display: flex; gap: 8px; padding: 10px; background-color: var(--bg-light); border-radius: 4px;">
+              <button class="btn btn-sm" id="startSimulationBtn" style="flex: 1;">
+                <i class="fas fa-play"></i> Start
+              </button>
+              <button class="btn btn-sm" id="stopSimulationBtn" style="flex: 1;">
+                <i class="fas fa-stop"></i> Stop
+              </button>
+              <div style="display: flex; align-items: center; gap: 5px; padding: 0 10px;">
+                <i class="fas fa-circle" id="simulationStatus" style="color: #666; font-size: 8px;"></i>
+                <span style="font-size: 11px; color: var(--text-secondary);" id="simulationStatusText">Stopped</span>
+              </div>
+            </div>
+            
+            <!-- Sensor Telemetry Panel -->
+            <div style="margin-bottom: 15px;">
+              <div style="background-color: var(--bg-light); border-radius: 4px; padding: 10px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--text-primary); display: flex; align-items: center;">
+                  <i class="fas fa-chart-line" style="margin-right: 8px;"></i>
+                  Live Telemetry
+                </h4>
+                <div id="telemetryPanel" style="max-height: 300px; overflow-y: auto;">
+                  <!-- Telemetry data will be rendered here -->
+                  <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
+                    No sensor data yet. Start simulation and add sensors to see telemetry.
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div class="sensor-category">
               <div class="category-header">
                 <span><i class="fas fa-ruler-combined"></i> Distance Sensors</span>
@@ -1472,7 +1502,25 @@ initScene();</textarea
       <!-- Tooltip -->
       <div id="tooltip" class="tooltip"></div>
     </div>
-    <script>
+    <script type="module">
+      // Import sensor system modules
+      import { SensorEngine } from '/static/js/sensors/sensor_engine.js';
+      import { LiDAR } from '/static/js/sensors/LiDAR.js';
+      import { Ultrasonic } from '/static/js/sensors/Ultrasonic.js';
+      import { Proximity } from '/static/js/sensors/Proximity.js';
+      import { Temperature } from '/static/js/sensors/Temperature.js';
+      import { Pressure } from '/static/js/sensors/Pressure.js';
+      import { SensorTelemetryPanel } from '/static/js/sensors/sensor_telemetry_panel.js';
+      
+      // Make classes available globally (needed for createSensorEntity)
+      window.SensorEngine = SensorEngine;
+      window.LiDAR = LiDAR;
+      window.Ultrasonic = Ultrasonic;
+      window.Proximity = Proximity;
+      window.Temperature = Temperature;
+      window.Pressure = Pressure;
+      window.SensorTelemetryPanel = SensorTelemetryPanel;
+      
       // Initialize Cesium with proper configuration
       // Cesium token is injected from server-side environment when available
       Cesium.Ion.defaultAccessToken = '{{ cesium_ion_token | default("") }}';
@@ -1503,6 +1551,9 @@ initScene();</textarea
         activeHandlers: [],
         isAICodeExecutionEnabled: true,
         currentFile: 'main.js',
+        sensorEngine: null,
+        telemetryPanel: null,
+        sensorInstances: new Map(), // Track sensor instances by entity ID
       };
 
       // Enhanced scene setup
@@ -1526,6 +1577,22 @@ initScene();</textarea
             roll: 0.0,
           },
         });
+      }
+
+      // Initialize sensor simulation system
+      function initializeSensorSystem() {
+        // Create sensor engine
+        state.sensorEngine = new SensorEngine(viewer);
+        
+        // Create telemetry panel
+        state.telemetryPanel = new SensorTelemetryPanel('telemetryPanel');
+        
+        // Wire up telemetry callbacks
+        state.sensorEngine.onTelemetry((telemetry) => {
+          state.telemetryPanel.updateSensorData(telemetry);
+        });
+        
+        console.log('Sensor system initialized');
       }
 
       // Initialize CodeMirror editor
@@ -1730,6 +1797,23 @@ initScene();</textarea
           });
         document.getElementById('clearConsole').addEventListener('click', () => {
           document.getElementById('consoleOutput').textContent = '';
+        });
+
+        // Simulation control buttons
+        document.getElementById('startSimulationBtn').addEventListener('click', () => {
+          if (state.sensorEngine) {
+            state.sensorEngine.start();
+            updateSimulationStatus(true);
+            outputToConsole('Sensor simulation started', 'info');
+          }
+        });
+        
+        document.getElementById('stopSimulationBtn').addEventListener('click', () => {
+          if (state.sensorEngine) {
+            state.sensorEngine.stop();
+            updateSimulationStatus(false);
+            outputToConsole('Sensor simulation stopped', 'info');
+          }
         });
 
         // Upload modal
@@ -2129,6 +2213,19 @@ configureModel();`);
         icon.classList.toggle('fa-chevron-right');
       }
 
+      function updateSimulationStatus(isRunning) {
+        const statusIcon = document.getElementById('simulationStatus');
+        const statusText = document.getElementById('simulationStatusText');
+        
+        if (isRunning) {
+          statusIcon.style.color = '#4CAF50';
+          statusText.textContent = 'Running';
+        } else {
+          statusIcon.style.color = '#666';
+          statusText.textContent = 'Stopped';
+        }
+      }
+
       function outputToConsole(message, type = 'log') {
         const consoleOutput = document.getElementById('consoleOutput');
         const messageDiv = document.createElement('div');
@@ -2211,63 +2308,142 @@ configureModel();`);
       }
 
       function createSensorEntity(sensorParam, position) {
-        const entityOptions = {
-          position: position,
-          name: `${sensorParam.type} Sensor`,
-          description: sensorParam.description,
-          label: {
-            text: sensorParam.type,
-            font: '14pt sans-serif',
-            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-            fillColor: Cesium.Color.WHITE,
-            outlineColor: Cesium.Color.BLACK,
-            outlineWidth: 2,
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-            pixelOffset: new Cesium.Cartesian2(0, -20),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-          },
-        };
+        // Create functional sensor instance based on type
+        let sensor = null;
+        
+        switch (sensorParam.type) {
+          case 'LiDAR':
+            sensor = new LiDAR({
+              position: position,
+              range: sensorParam.defaultRange,
+              fov: sensorParam.defaultFov,
+              color: sensorParam.color,
+              viewer: viewer,
+              name: `${sensorParam.type} Sensor`,
+              description: sensorParam.description
+            });
+            break;
+            
+          case 'Ultrasonic':
+            sensor = new Ultrasonic({
+              position: position,
+              range: sensorParam.defaultRange,
+              fov: sensorParam.defaultFov,
+              color: sensorParam.color,
+              viewer: viewer,
+              name: `${sensorParam.type} Sensor`,
+              description: sensorParam.description
+            });
+            break;
+            
+          case 'Proximity':
+            sensor = new Proximity({
+              position: position,
+              range: sensorParam.defaultRange,
+              color: sensorParam.color,
+              viewer: viewer,
+              name: `${sensorParam.type} Sensor`,
+              description: sensorParam.description
+            });
+            break;
+            
+          case 'Temperature':
+            sensor = new Temperature({
+              position: position,
+              color: sensorParam.color,
+              viewer: viewer,
+              name: `${sensorParam.type} Sensor`,
+              description: sensorParam.description
+            });
+            break;
+            
+          case 'Pressure':
+            sensor = new Pressure({
+              position: position,
+              color: sensorParam.color,
+              viewer: viewer,
+              name: `${sensorParam.type} Sensor`,
+              description: sensorParam.description
+            });
+            break;
+            
+          default:
+            // Fallback to static entity for unsupported sensor types (Radar, Humidity)
+            const entityOptions = {
+              position: position,
+              name: `${sensorParam.type} Sensor`,
+              description: sensorParam.description,
+              label: {
+                text: sensorParam.type,
+                font: '14pt sans-serif',
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                fillColor: Cesium.Color.WHITE,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 2,
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                pixelOffset: new Cesium.Cartesian2(0, -20),
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              },
+            };
 
-        switch (sensorParam.shape) {
-          case 'cone':
-            entityOptions.cylinder = {
-              length: sensorParam.defaultRange,
-              topRadius: 0,
-              bottomRadius:
-                sensorParam.defaultRange *
-                Math.tan(Cesium.Math.toRadians(sensorParam.defaultFov / 2)),
-              material: Cesium.Color.fromCssColorString(sensorParam.color).withAlpha(0.4),
-              outline: true,
-              outlineColor: Cesium.Color.WHITE,
-              slices: 64,
-            };
-            break;
-          case 'sphere':
-            entityOptions.ellipsoid = {
-              radii: new Cesium.Cartesian3(
-                sensorParam.defaultRange,
-                sensorParam.defaultRange,
-                sensorParam.defaultRange
-              ),
-              material: Cesium.Color.fromCssColorString(sensorParam.color).withAlpha(0.3),
-              outline: true,
-              outlineColor: Cesium.Color.WHITE,
-            };
-            break;
-          case 'point':
-            entityOptions.point = {
-              pixelSize: 10,
-              color: Cesium.Color.fromCssColorString(sensorParam.color),
-              outlineColor: Cesium.Color.WHITE,
-              outlineWidth: 2,
-            };
-            break;
+            switch (sensorParam.shape) {
+              case 'cone':
+                entityOptions.cylinder = {
+                  length: sensorParam.defaultRange,
+                  topRadius: 0,
+                  bottomRadius:
+                    sensorParam.defaultRange *
+                    Math.tan(Cesium.Math.toRadians(sensorParam.defaultFov / 2)),
+                  material: Cesium.Color.fromCssColorString(sensorParam.color).withAlpha(0.4),
+                  outline: true,
+                  outlineColor: Cesium.Color.WHITE,
+                  slices: 64,
+                };
+                break;
+              case 'sphere':
+                entityOptions.ellipsoid = {
+                  radii: new Cesium.Cartesian3(
+                    sensorParam.defaultRange,
+                    sensorParam.defaultRange,
+                    sensorParam.defaultRange
+                  ),
+                  material: Cesium.Color.fromCssColorString(sensorParam.color).withAlpha(0.3),
+                  outline: true,
+                  outlineColor: Cesium.Color.WHITE,
+                };
+                break;
+              case 'point':
+                entityOptions.point = {
+                  pixelSize: 10,
+                  color: Cesium.Color.fromCssColorString(sensorParam.color),
+                  outlineColor: Cesium.Color.WHITE,
+                  outlineWidth: 2,
+                };
+                break;
+            }
+
+            const entity = viewer.entities.add(entityOptions);
+            state.entities.push(entity);
+            updateEntitiesList();
+            return entity;
         }
-
-        const entity = viewer.entities.add(entityOptions);
-        state.entities.push(entity);
-        updateEntitiesList();
-        return entity;
+        
+        // For functional sensors, register with sensor engine
+        if (sensor) {
+          const entity = sensor.entity;
+          state.entities.push(entity);
+          state.sensorInstances.set(entity.id, sensor);
+          
+          // Register sensor with engine if it's running
+          if (state.sensorEngine) {
+            state.sensorEngine.registerSensor(sensor);
+          }
+          
+          updateEntitiesList();
+          return entity;
+        }
+        
+        return null;
       }
 
       // AI Assistant ===============================================
@@ -2936,6 +3112,7 @@ addPoint(${lon}, ${lat}, 100, Cesium.Color.RED);`;
 
       async function initialize() {
         initializeScene();
+        initializeSensorSystem(); // Initialize sensor engine
         initializeUI();
         
         // Initialize session management (async)
