@@ -22,6 +22,37 @@ Documentation, README, system organization, open-source preparation
 Fixes, cleanup, debugging & modernization of codebase
 Feature expansions and architecture consistency
 
+3. Tchinda Jordan (Developer & Repo Maintainer & Researcher)
+Major contributor to session management, sensor systems, and platform architecture
+Implemented:
+Complete session management system with IndexedDB persistence
+- Created session storage layer with CRUD operations (create, read, update, delete sessions)
+- Implemented session manager with auto-save functionality (30-second intervals)
+- Built comprehensive session UI with search, filtering, and session switching
+- Designed lightweight state serialization for camera, entities, editor, and scene settings
+- Comprehensive documentation suite (SESSION_MANAGEMENT.md, SESSION_QUICKSTART.md, IMPLEMENTATION_SUMMARY.md)
+- Full test suite with 5 automated tests for session functionality
+
+Functional sensor simulation system with real-time telemetry
+- Architected sensor engine with Cesium clock integration for synchronized updates
+- Implemented 5 functional sensor classes with real physics:
+  * LiDAR: 16-ray raycasting distance measurements with terrain detection
+  * Ultrasonic: Single-ray distance sensor with range detection
+  * Proximity: Spatial entity detection within configurable radius
+  * Temperature: Altitude-based atmospheric temperature calculation
+  * Pressure: Barometric pressure using exponential altitude formula
+- Created sensor telemetry panel with live data visualization and throttled updates
+- Implemented drag-and-drop sensor creation with full scene integration
+- Added animated telemetry UI with flowing gradients, shimmer effects, and data pulse animations
+- Designed simulation controls (start/stop/clear) with real-time sensor registration
+
+3D Objects Router implementation
+Repository refactoring and maintenance
+Defined and structured main README
+Multiple bug fixes and system improvements
+Code architecture consistency and modernization
+
+
 🌍 Community Contributors
 Name	Contribution
 (Your name here)	Open an issue or pull request to be added

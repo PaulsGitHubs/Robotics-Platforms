@@ -1,0 +1,34 @@
+{
+  "physics": {
+    "drone": {
+      "mass": 1.2,
+      "drag": 0.3,
+      "restitution": 0.1,
+      "playerControlled": true
+    },
+    "car": {
+      "mass": 1200,
+      "drag": 0.05,
+      "restitution": 0.2
+    }
+  },
+
+  "models": {
+    "drone": {
+      "model": "/static/assets/models/aircraft/drone.glb",
+      "physicsType": "aircraft"
+    },
+    "car": {
+      "model": "/static/assets/models/cars/sedan.glb",
+      "physicsType": "vehicle"
+    },
+    "aircraft": {
+      "model": "/static/assets/models/aircraft/cessna.glb",
+      "physicsType": "aircraft"
+    },
+    "satellite": {
+      "model": "/static/assets/models/satellites/satellite.glb",
+      "physicsType": "orbital"
+    }
+  }
+}

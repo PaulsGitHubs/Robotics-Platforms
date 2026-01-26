@@ -12,6 +12,8 @@ Flask server for the Digital Twin IDE.
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory, abort
 from dotenv import load_dotenv
+import routes.objects as objects_router
+
 
 load_dotenv()
 
@@ -26,6 +28,7 @@ except Exception as e:
     AIEngine = None
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.register_blueprint(objects_router.objects_bp)  # Register the 3d objects blueprint
 
 # Configuration from environment
 CESIUM_ION_TOKEN = os.getenv("CESIUM_ION_TOKEN", "")
@@ -39,13 +42,49 @@ def index():
     """
     return render_template("digital_twin.html", cesium_ion_token=CESIUM_ION_TOKEN)
 
+@app.route("/test_module_import.html")
+def test_module_import():
+    """Test page for module imports"""
+    return send_from_directory(os.getcwd(), "test_module_import.html")
+
 # AI query endpoint - returns AI response (string or structured JSON)
 @app.route("/ai_query", methods=["POST"])
 def ai_query():
     payload = request.get_json(silent=True) or {}
-    query = payload.get("query", "")
+    # Accept either 'message' or legacy 'query'
+    query = payload.get("message") or payload.get("query") or ""
     if not query:
         return jsonify({"error": "No query provided"}), 400
+
+    # Simple geocoding for commands like 'drive to Lagos Island'
+    try:
+        import requests
+        if "drive to" in query.lower():
+            loc = query.lower().split("drive to", 1)[1].strip()
+            if loc:
+                try:
+                    r = requests.get(
+                        "https://nominatim.openstreetmap.org/search",
+                        params={"format": "json", "q": loc, "limit": 1},
+                        headers={"User-Agent": "DigitalTwin/1.0"},
+                        timeout=5,
+                    )
+                    data = r.json()
+                    if data:
+                        lat = float(data[0]["lat"])
+                        lon = float(data[0]["lon"])
+                        return jsonify({
+                            "message": f"Driving to {data[0].get('display_name', loc)}",
+                            "success": True,
+                            "action": {"type": "drive", "lat": lat, "lon": lon},
+                        })
+                    else:
+                        return jsonify({"message": f"Location not found: {loc}", "success": False}), 200
+                except Exception as e:
+                    return jsonify({"error": str(e), "success": False}), 500
+    except Exception:
+        # requests may not be available; continue to AI fallback
+        pass
 
     if not AI_ENGINE_AVAILABLE:
         # Safe fallback: echo back the prompt for now
@@ -59,6 +98,32 @@ def ai_query():
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
+
+# Add /ai/object endpoint (mirrors FastAPI behavior expected by the UI)
+@app.route("/ai/object", methods=["POST"])
+def ai_object():
+    payload = request.get_json(silent=True) or {}
+    obj = payload.get("object") or {}
+    model = str(obj.get("model", "")).lower()
+    otype = str(obj.get("type", "")).lower()
+
+    classified = otype or "unknown"
+    suggestions = []
+
+    if "car" in model or "sedan" in model or "truck" in model:
+        classified = "car"
+        suggestions = ["drive", "brake", "slow_at_checkpoints", "report_status"]
+    elif "aircraft" in model or "plane" in model or "airplane" in model:
+        classified = "aircraft"
+        suggestions = ["arm_engines", "takeoff", "land", "report_status"]
+    elif "satellite" in model or "sat" in model:
+        classified = "satellite"
+        suggestions = ["monitor_orbit", "track_signal", "report_status"]
+    else:
+        suggestions = ["inspect", "report_status"]
+
+    return jsonify({"classification": classified, "suggestions": suggestions, "ai": None}), 200
+
 # Endpoint to list sensor JS files available (for auto-loader)
 @app.route("/sensor_list", methods=["GET"])
 def sensor_list():
@@ -71,13 +136,7 @@ def sensor_list():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Serve 3d_objects files
-@app.route("/3d_objects/<path:filename>")
-def serve_3d_objects(filename):
-    base = os.path.join(os.getcwd(), "3d_objects")
-    if not os.path.exists(os.path.join(base, filename)):
-        abort(404)
-    return send_from_directory(base, filename)
+
 
 # Optional: Serve physics or other folders outside static
 @app.route("/physics/<path:filename>")
@@ -86,6 +145,32 @@ def serve_physics(filename):
     if not os.path.exists(os.path.join(base, filename)):
         abort(404)
     return send_from_directory(base, filename)
+
+# Serve frontend static files (session management JS modules)
+@app.route("/static/js/<path:filename>")
+def serve_frontend_js(filename):
+    """
+    Serve JavaScript modules from frontend/static/js/
+    This includes session management modules and other frontend JS files.
+    """
+    from flask import make_response
+    
+    frontend_js = os.path.join(os.getcwd(), "frontend", "static", "js")
+    filepath = os.path.join(frontend_js, filename)
+    
+    if not os.path.exists(filepath):
+        # Fallback to root static/js if not in frontend
+        root_js = os.path.join(os.getcwd(), "static", "js")
+        filepath = os.path.join(root_js, filename)
+        if not os.path.exists(filepath):
+            abort(404)
+        response = make_response(send_from_directory(root_js, filename))
+        response.headers['Content-Type'] = 'application/javascript'
+        return response
+    
+    response = make_response(send_from_directory(frontend_js, filename))
+    response.headers['Content-Type'] = 'application/javascript'
+    return response
 
 # Basic health check
 @app.route("/health")
