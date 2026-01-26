@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Module Import</title>
+</head>
+<body>
+    <h1>Module Import Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        try {
+            output.innerHTML += '<p>Starting import test...</p>';
+            
+            // Test importing session_storage
+            const storage = await import('/static/js/session_storage.js');
+            output.innerHTML += '<p>✓ session_storage.js imported successfully</p>';
+            output.innerHTML += '<p>Exports: ' + Object.keys(storage).join(', ') + '</p>';
+            
+            // Test importing session_manager
+            const manager = await import('/static/js/session_manager.js');
+            output.innerHTML += '<p>✓ session_manager.js imported successfully</p>';
+            output.innerHTML += '<p>Exports: ' + Object.keys(manager).join(', ') + '</p>';
+            
+            output.innerHTML += '<p style="color: green; font-weight: bold;">All imports successful!</p>';
+        } catch (e) {
+            output.innerHTML += '<p style="color: red;">Error: ' + e.message + '</p>';
+            output.innerHTML += '<p style="color: red;">Stack: ' + e.stack + '</p>';
+            console.error('Import error:', e);
+        }
+    </script>
+</body>
+</html>

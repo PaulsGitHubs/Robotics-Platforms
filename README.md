@@ -63,6 +63,58 @@ The backend exposes a small public API for demo and integration purposes. These 
 
 ---
 
+## 💾 Session Management (NEW!)
+
+The Digital Twin IDE now includes **persistent session management** using **IndexedDB** for storing workspace states. This feature enables users to:
+
+- **Save & restore** complete IDE sessions (camera position, entities, code, scene settings)
+- **Switch between projects** seamlessly with multiple saved sessions
+- **Auto-save** every 30 seconds to prevent data loss
+- **Search & filter** sessions by name
+- **Lightweight storage** - typical sessions are only 2-50 KB
+
+### Quick Start
+
+1. Open the Digital Twin IDE: `http://127.0.0.1:5000`
+2. Click the **Sessions** tab in the left sidebar
+3. Click **New** to create your first session
+4. Work on your project (add entities, write code, move camera)
+5. Click **Save** or wait for auto-save (30 seconds)
+6. Create multiple sessions and switch between them!
+
+### Why IndexedDB?
+
+We chose IndexedDB over localStorage for superior storage capacity (GBs vs 5-10MB), async non-blocking operations, native structured data support, and better performance with large datasets.
+
+### Documentation
+
+- **Quick Start Guide**: `docs/SESSION_QUICKSTART.md`
+- **Technical Documentation**: `docs/SESSION_MANAGEMENT.md`
+- **Implementation Summary**: `docs/IMPLEMENTATION_SUMMARY.md`
+
+### API Example
+
+```javascript
+import * as SM from '/static/js/session_manager.js';
+
+// Initialize
+await SM.initSessionManager();
+
+// Create session
+await SM.createNewSession('My Project');
+
+// Save current work
+await SM.saveCurrentSession();
+
+// List all sessions
+const sessions = await SM.getAllSessions();
+
+// Load a session
+await SM.loadSessionById(sessions[0].id);
+```
+
+---
+
 ## Physics Architecture ✅
 
 This project includes a deterministic physics architecture for the Digital Twin demo. Key points:

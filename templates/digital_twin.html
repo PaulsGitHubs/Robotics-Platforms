@@ -240,6 +240,88 @@
         color: var(--primary);
       }
 
+      /* Session items */
+      .session-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        background-color: var(--bg-light);
+        border-radius: 4px;
+        border-left: 3px solid var(--primary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .session-item:hover {
+        background-color: var(--bg-lighter);
+        transform: translateX(2px);
+      }
+
+      .session-item.active {
+        border-left-color: var(--success);
+        background-color: var(--bg-lighter);
+      }
+
+      .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .session-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 13px;
+      }
+
+      .session-actions {
+        display: flex;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .session-item:hover .session-actions {
+        opacity: 1;
+      }
+
+      .session-action-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+      }
+
+      .session-action-btn:hover {
+        background-color: var(--bg-dark);
+        color: var(--text-primary);
+      }
+
+      .session-action-btn.delete:hover {
+        color: var(--danger);
+      }
+
+      .session-timestamp {
+        font-size: 11px;
+        color: var(--text-secondary);
+      }
+
+      .session-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .session-empty i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.3;
+      }
+
       /* Main content area */
       .main-content {
         flex: 1;
@@ -279,9 +361,67 @@
         font-weight: 500;
       }
 
+      .session-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        font-size: 13px;
+        color: #bbb;
+        cursor: default;
+        transition: all 0.2s ease;
+      }
+
+      .session-label i {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+
+      .session-label.dirty #sessionName::before {
+        content: '* ';
+        color: #ffa500;
+        font-weight: bold;
+      }
+
+      .session-label.unsaved {
+        color: #999;
+        font-style: italic;
+      }
+
       .editor-actions {
         display: flex;
         gap: 8px;
+      }
+
+      .session-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        font-size: 13px;
+        color: #bbb;
+        cursor: default;
+        transition: all 0.2s ease;
+      }
+
+      .session-label i {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+
+      .session-label.dirty #sessionName::before {
+        content: '* ';
+        color: #ffa500;
+        font-weight: bold;
+      }
+
+      .session-label.unsaved {
+        color: #999;
+        font-style: italic;
       }
 
       .CodeMirror {
@@ -845,7 +985,8 @@
         </div>
 
         <div class="sidebar-tabs">
-          <div class="sidebar-tab active" data-tab="explorer">
+          <div class="sidebar-tab active" data-tab="sessions"><i class="fas fa-save"></i> Sessions</div>
+          <div class="sidebar-tab" data-tab="explorer">
             <i class="fas fa-folder-open"></i> Explorer
           </div>
           <div class="sidebar-tab" data-tab="entities"><i class="fas fa-cubes"></i> Entities</div>
@@ -856,7 +997,7 @@
         </div>
 
         <!-- Explorer Tab -->
-        <div class="tab-content active" id="explorer-tab">
+        <div class="tab-content" id="explorer-tab">
           <ul class="file-explorer">
             <li class="file-item active" data-file="main.js">
               <i class="fas fa-file-code"></i> main.js
@@ -1007,6 +1148,33 @@
           </div>
         </div>
 
+        <!-- Sessions Tab -->
+        <div class="tab-content active" id="sessions-tab">
+          <div style="padding: 10px">
+            <div style="margin-bottom: 15px; display: flex; gap: 8px;">
+              <button class="btn btn-sm" id="newSessionBtn" style="flex: 1;">
+                <i class="fas fa-plus"></i> New
+              </button>
+              <button class="btn btn-sm" id="saveSessionBtn" style="flex: 1;">
+                <i class="fas fa-save"></i> Save
+              </button>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+              <input
+                type="text"
+                class="form-input"
+                id="sessionSearchInput"
+                placeholder="Search sessions..."
+              />
+            </div>
+
+            <div id="sessions-list" style="max-height: calc(100vh - 300px); overflow-y: auto;">
+              <!-- Sessions will be populated here -->
+            </div>
+          </div>
+        </div>
+
         <!-- Functions Documentation Tab -->
         <div class="tab-content" id="functions-tab">
           <div style="padding: 10px">
@@ -1100,6 +1268,10 @@
           <div class="code-editor">
             <div class="editor-toolbar">
               <h3 class="editor-title" id="editorTitle">main.js</h3>
+              <div class="session-label" id="sessionLabel" title="Current session">
+                <i class="fas fa-file-code"></i>
+                <span id="sessionName">Unsaved</span>
+              </div>
               <div class="editor-actions">
                 <button class="btn btn-sm" id="saveButton"><i class="fas fa-save"></i> Save</button>
               </div>
@@ -1469,13 +1641,26 @@ initScene();</textarea
             warn: (...args) => outputToConsole(args.join(' '), 'warning'),
           };
 
-          func(viewer, Cesium, customConsole);
-          outputToConsole('Code executed successfully', 'success');
+          try {
+            func(viewer, Cesium, customConsole);
+            outputToConsole('Code executed successfully', 'success');
+          } catch (runtimeError) {
+            // Provide helpful error message for common issues
+            let errorMsg = runtimeError.message;
+            if (errorMsg.includes('skyAtmosphere') || errorMsg.includes('fog')) {
+              errorMsg += '\n\nTip: Add property checks like: if (viewer.scene.skyAtmosphere) { ... }';
+            }
+            outputToConsole(`Runtime error: ${errorMsg}`, 'error');
+            console.error('User code error:', runtimeError);
+          }
         } catch (error) {
           outputToConsole(`Execution error: ${error.message}`, 'error');
           console.error(error);
         }
       }
+      
+      // Expose runCode globally for session manager
+      window.runCode = runCode;
 
       function sanitizeCode(code) {
         const forbiddenPatterns = [
@@ -1536,7 +1721,13 @@ initScene();</textarea
         document.getElementById('stopButton').addEventListener('click', stopExecution);
         document
           .getElementById('saveButton')
-          .addEventListener('click', () => outputToConsole('Code saved', 'info'));
+          .addEventListener('click', () => {
+            if (typeof saveCurrentSession === 'function') {
+              saveCurrentSession();
+            } else {
+              outputToConsole('Session management not initialized yet', 'warning');
+            }
+          });
         document.getElementById('clearConsole').addEventListener('click', () => {
           document.getElementById('consoleOutput').textContent = '';
         });
@@ -1571,9 +1762,13 @@ function configureScene() {
   viewer.scene.globe.enableLighting = true;
   viewer.scene.shadowMap.enabled = true;
   
-  // Set atmosphere effects
-  viewer.scene.skyAtmosphere.show = true;
-  viewer.scene.fog.enabled = true;
+  // Set atmosphere effects (check for existence first)
+  if (viewer.scene.skyAtmosphere) {
+    viewer.scene.skyAtmosphere.show = true;
+  }
+  if (viewer.scene.fog) {
+    viewer.scene.fog.enabled = true;
+  }
   
   console.log("Scene configured");
 }
@@ -1656,6 +1851,11 @@ function configureModel() {
 }
 
 configureModel();`);
+        }
+        
+        // Update saved state baseline when switching files
+        if (typeof updateSavedState === 'function') {
+          updateSavedState();
         }
       }
 
@@ -2404,11 +2604,347 @@ addPoint(${lon}, ${lat}, 100, Cesium.Color.RED);`;
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#039;');
       }
+      
+      // Session Management =========================================
+      let sessionModule = null;
+      let isSessionDirty = false;
+      let savedEditorState = ''; // Track last saved state
+      
+      // Update session label
+      function updateSessionLabel(sessionName, isDirty = false) {
+        const labelEl = document.getElementById('sessionLabel');
+        const nameEl = document.getElementById('sessionName');
+        
+        if (!labelEl || !nameEl) return;
+        
+        isSessionDirty = isDirty;
+        
+        if (sessionName) {
+          nameEl.textContent = sessionName;
+          labelEl.classList.remove('unsaved');
+          if (isDirty) {
+            labelEl.classList.add('dirty');
+          } else {
+            labelEl.classList.remove('dirty');
+          }
+        } else {
+          nameEl.textContent = 'Unsaved';
+          labelEl.classList.add('unsaved');
+          labelEl.classList.remove('dirty');
+        }
+      }
+      
+      // Check if current state differs from saved state
+      function checkIfDirty() {
+        if (!codeEditor) return false;
+        
+        const currentCode = codeEditor.getValue();
+        const isDirty = currentCode !== savedEditorState;
+        
+        const currentId = sessionModule?.getCurrentSessionId();
+        if (currentId) {
+          const sessionName = document.getElementById('sessionName').textContent;
+          if (sessionName !== 'Unsaved') {
+            updateSessionLabel(sessionName, isDirty);
+          }
+        }
+        
+        return isDirty;
+      }
+      
+      // Mark session as dirty when editor changes
+      function setupSessionLabel() {
+        if (!codeEditor) return;
+        
+        // Use debounced change handler for efficiency
+        let changeTimeout;
+        codeEditor.on('change', () => {
+          clearTimeout(changeTimeout);
+          changeTimeout = setTimeout(() => {
+            checkIfDirty();
+          }, 300); // Debounce 300ms
+        });
+      }
+      
+      // Update saved state snapshot
+      function updateSavedState() {
+        if (codeEditor) {
+          savedEditorState = codeEditor.getValue();
+        }
+      }
+      
+      // Setup keyboard shortcuts (Ctrl+S, Ctrl+N)
+      function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', async (e) => {
+          // Ctrl+S / Cmd+S - Save current session
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            await saveCurrentSession();
+          }
+          
+          // Ctrl+N / Cmd+N - New session
+          if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            await createNewSession();
+          }
+        });
+      }
+      
+      async function initSessionManagement() {
+        try {
+          console.log('Loading session manager module...');
+          sessionModule = await import('/static/js/session_manager.js');
+          console.log('Session manager module loaded');
+          
+          await sessionModule.initSessionManager();
+          console.log('Session manager initialized');
+          
+          // Setup UI handlers
+          const newBtn = document.getElementById('newSessionBtn');
+          const saveBtn = document.getElementById('saveSessionBtn');
+          const searchInput = document.getElementById('sessionSearchInput');
+          
+          console.log('Found buttons:', { newBtn: !!newBtn, saveBtn: !!saveBtn, searchInput: !!searchInput });
+          
+          if (newBtn) {
+            newBtn.addEventListener('click', createNewSession);
+            console.log('New button listener attached');
+          }
+          if (saveBtn) {
+            saveBtn.addEventListener('click', saveCurrentSession);
+            console.log('Save button listener attached');
+          }
+          if (searchInput) {
+            searchInput.addEventListener('input', filterSessions);
+          }
+          
+          // Load sessions list
+          await refreshSessionsList();
+          
+          // Setup session label tracking
+          setupSessionLabel();
+          
+          // Setup keyboard shortcuts
+          setupKeyboardShortcuts();
+          
+          console.log('Session management initialized successfully');
+        } catch (e) {
+          console.error('Session management initialization failed:', e);
+          console.error('Error stack:', e.stack);
+        }
+      }
+      
+      async function createNewSession() {
+        const name = prompt('Enter session name:', `Session ${new Date().toLocaleDateString()}`);
+        if (!name) return;
+        
+        try {
+          await sessionModule.createNewSession(name);
+          updateSavedState(); // Update baseline
+          updateSessionLabel(name, false);
+          await refreshSessionsList();
+          addAIMessage(`New session created: ${name}`, 'assistant');
+        } catch (e) {
+          console.error('Failed to create session:', e);
+          alert('Failed to create session');
+        }
+      }
+      
+      async function saveCurrentSession() {
+        try {
+          const success = await sessionModule.saveCurrentSession();
+          if (success) {
+            updateSavedState(); // Update baseline after save
+            // Get current session name
+            const currentId = sessionModule.getCurrentSessionId();
+            if (currentId) {
+              const sessions = await sessionModule.getAllSessions();
+              const currentSession = sessions.find(s => s.id === currentId);
+              if (currentSession) {
+                updateSessionLabel(currentSession.name, false);
+              }
+            }
+            await refreshSessionsList();
+            addAIMessage('Session saved successfully', 'assistant');
+          } else {
+            // No current session, create a new one
+            await createNewSession();
+          }
+        } catch (e) {
+          console.error('Failed to save session:', e);
+          alert('Failed to save session');
+        }
+      }
+      
+      async function refreshSessionsList() {
+        const container = document.getElementById('sessions-list');
+        if (!container || !sessionModule) return;
+        
+        try {
+          const sessions = await sessionModule.getAllSessions();
+          const currentId = sessionModule.getCurrentSessionId();
+          
+          if (sessions.length === 0) {
+            container.innerHTML = `
+              <div class="session-empty">
+                <i class="fas fa-inbox"></i>
+                <div>No sessions yet</div>
+                <div style="margin-top: 8px; font-size: 12px;">Click "New" to create your first session</div>
+              </div>
+            `;
+            return;
+          }
+          
+          container.innerHTML = sessions.map(session => {
+            const date = new Date(session.timestamp);
+            const isActive = session.id === currentId;
+            
+            return `
+              <div class="session-item ${isActive ? 'active' : ''}" data-session-id="${session.id}">
+                <div class="session-header">
+                  <div class="session-name">${escapeHtml(session.name)}</div>
+                  <div class="session-actions">
+                    <button class="session-action-btn load" title="Load session">
+                      <i class="fas fa-folder-open"></i>
+                    </button>
+                    <button class="session-action-btn rename" title="Rename session">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="session-action-btn delete" title="Delete session">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="session-timestamp">
+                  ${date.toLocaleDateString()} ${date.toLocaleTimeString()}
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          // Attach event handlers
+          container.querySelectorAll('.session-item').forEach(item => {
+            const sessionId = item.dataset.sessionId;
+            
+            item.querySelector('.load')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              loadSession(sessionId);
+            });
+            
+            item.querySelector('.rename')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              renameSession(sessionId);
+            });
+            
+            item.querySelector('.delete')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              deleteSession(sessionId);
+            });
+            
+            // Double-click to load
+            item.addEventListener('dblclick', () => loadSession(sessionId));
+          });
+          
+        } catch (e) {
+          console.error('Failed to refresh sessions list:', e);
+          container.innerHTML = '<div class="session-empty">Error loading sessions</div>';
+        }
+      }
+      
+      async function loadSession(sessionId) {
+        try {
+          const success = await sessionModule.loadSessionById(sessionId);
+          if (success) {
+            updateSavedState(); // Update baseline after loading
+            // Update session label
+            const sessions = await sessionModule.getAllSessions();
+            const session = sessions.find(s => s.id === sessionId);
+            if (session) {
+              updateSessionLabel(session.name, false);
+            }
+            await refreshSessionsList();
+            addAIMessage('Session loaded successfully', 'assistant');
+          } else {
+            alert('Failed to load session');
+          }
+        } catch (e) {
+          console.error('Failed to load session:', e);
+          alert('Failed to load session');
+        }
+      }
+      
+      async function renameSession(sessionId) {
+        try {
+          const sessions = await sessionModule.getAllSessions();
+          const session = sessions.find(s => s.id === sessionId);
+          if (!session) {
+            alert('Session not found');
+            return;
+          }
+          
+          const newName = prompt('Enter new session name:', session.name);
+          if (!newName || newName === session.name) return;
+          
+          // Update session with new name
+          await sessionModule.saveSession(sessionId, newName, session.state);
+          
+          // Update label if this is the current session
+          const currentId = sessionModule.getCurrentSessionId();
+          if (sessionId === currentId) {
+            updateSessionLabel(newName, isSessionDirty);
+          }
+          
+          await refreshSessionsList();
+          addAIMessage(`Session renamed to: ${newName}`, 'assistant');
+        } catch (e) {
+          console.error('Failed to rename session:', e);
+          alert('Failed to rename session');
+        }
+      }
+      
+      async function deleteSession(sessionId) {
+        if (!confirm('Delete this session? This cannot be undone.')) return;
+        
+        try {
+          const currentId = sessionModule.getCurrentSessionId();
+          await sessionModule.deleteSessionById(sessionId);
+          
+          // If deleted session was current, reset label
+          if (sessionId === currentId) {
+            updateSessionLabel(null, false);
+          }
+          
+          await refreshSessionsList();
+          addAIMessage('Session deleted', 'assistant');
+        } catch (e) {
+          console.error('Failed to delete session:', e);
+          alert('Failed to delete session');
+        }
+      }
+      
+      function filterSessions() {
+        const searchTerm = document.getElementById('sessionSearchInput')?.value.toLowerCase() || '';
+        const items = document.querySelectorAll('.session-item');
+        
+        items.forEach(item => {
+          const name = item.querySelector('.session-name')?.textContent.toLowerCase() || '';
+          item.style.display = name.includes(searchTerm) ? 'block' : 'none';
+        });
+      }
+      
       // Initialization =============================================
 
-      function initialize() {
+      async function initialize() {
         initializeScene();
         initializeUI();
+        
+        // Initialize session management (async)
+        try {
+          await initSessionManagement();
+        } catch (e) {
+          console.error('Failed to initialize session management:', e);
+        }
+        
         setTimeout(runCode, 500);
       }
 

@@ -42,6 +42,11 @@ def index():
     """
     return render_template("digital_twin.html", cesium_ion_token=CESIUM_ION_TOKEN)
 
+@app.route("/test_module_import.html")
+def test_module_import():
+    """Test page for module imports"""
+    return send_from_directory(os.getcwd(), "test_module_import.html")
+
 # AI query endpoint - returns AI response (string or structured JSON)
 @app.route("/ai_query", methods=["POST"])
 def ai_query():
@@ -140,6 +145,32 @@ def serve_physics(filename):
     if not os.path.exists(os.path.join(base, filename)):
         abort(404)
     return send_from_directory(base, filename)
+
+# Serve frontend static files (session management JS modules)
+@app.route("/static/js/<path:filename>")
+def serve_frontend_js(filename):
+    """
+    Serve JavaScript modules from frontend/static/js/
+    This includes session management modules and other frontend JS files.
+    """
+    from flask import make_response
+    
+    frontend_js = os.path.join(os.getcwd(), "frontend", "static", "js")
+    filepath = os.path.join(frontend_js, filename)
+    
+    if not os.path.exists(filepath):
+        # Fallback to root static/js if not in frontend
+        root_js = os.path.join(os.getcwd(), "static", "js")
+        filepath = os.path.join(root_js, filename)
+        if not os.path.exists(filepath):
+            abort(404)
+        response = make_response(send_from_directory(root_js, filename))
+        response.headers['Content-Type'] = 'application/javascript'
+        return response
+    
+    response = make_response(send_from_directory(frontend_js, filename))
+    response.headers['Content-Type'] = 'application/javascript'
+    return response
 
 # Basic health check
 @app.route("/health")
